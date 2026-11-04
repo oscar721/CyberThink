@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 interface LoginResponse {
@@ -34,6 +35,7 @@ export class Login {
         username: this.username,
         password: this.password,
       })
+      .pipe(timeout(20000))
       .subscribe({
         next: (response) => {
           this.loading = false;
@@ -41,7 +43,10 @@ export class Login {
         },
         error: (err) => {
           this.loading = false;
-          this.error = err?.error?.message ?? 'No se pudo conectar con el servidor';
+          this.error =
+            err?.name === 'TimeoutError'
+              ? 'El servidor tardó demasiado en responder. Inténtalo de nuevo.'
+              : err?.error?.message ?? 'No se pudo conectar con el servidor';
         },
       });
   }
