@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://cyberthinkbknd.onrender.com',
+  apiUrl: "https://cyberthinkbknd.onrender.com",
 };
