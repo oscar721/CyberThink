@@ -1,0 +1,80 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f1f5f9;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.session button {
+  padding: 0.5rem 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.session button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.welcome h1 {
+  margin: 0 0 0.5rem;
+  color: #0f172a;
+}
+
+.welcome p {
+  margin: 0 0 2rem;
+  color: #475569;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #2563eb;
+}
+
+.card p {
+  margin: 0;
+  color: #475569;
+}

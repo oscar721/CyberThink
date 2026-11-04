@@ -1,0 +1,29 @@
+<header class="topbar">
+  <span class="brand">CyberThink</span>
+  <div class="session">
+    <span>Hola, {{ user() }}</span>
+    <button type="button" (click)="logout()">Cerrar sesión</button>
+  </div>
+</header>
+
+<main class="content">
+  <section class="welcome">
+    <h1>Bienvenido a CyberThink</h1>
+    <p>Has iniciado sesión correctamente. Esta es una pantalla de prueba.</p>
+  </section>
+
+  <section class="cards">
+    <article class="card">
+      <h2>Frontend</h2>
+      <p>Angular + Vite</p>
+    </article>
+    <article class="card">
+      <h2>Backend</h2>
+      <p>Node + Express</p>
+    </article>
+    <article class="card">
+      <h2>Base de datos</h2>
+      <p>MongoDB Atlas</p>
+    </article>
+  </section>
+</main>

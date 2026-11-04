@@ -1,7 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { timeout } from 'rxjs';
+import { Auth } from '../auth';
 import { environment } from '../../environments/environment';
 
 interface LoginResponse {
@@ -18,6 +20,8 @@ interface LoginResponse {
 })
 export class Login {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(Auth);
+  private readonly router = inject(Router);
 
   username = '';
   password = '';
@@ -39,7 +43,8 @@ export class Login {
       .subscribe({
         next: (response) => {
           this.loading = false;
-          this.message = `${response.message}. Bienvenido, ${response.user.username}.`;
+          this.auth.login(response.user.username);
+          this.router.navigate(['/home']);
         },
         error: (err) => {
           this.loading = false;
