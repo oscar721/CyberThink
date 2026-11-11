@@ -1,29 +1,28 @@
-<header class="topbar">
-  <span class="brand">CyberThink</span>
-  <div class="session">
-    <span>Hola, {{ user() }}</span>
-    <button type="button" (click)="logout()">Cerrar sesión</button>
-  </div>
-</header>
+<app-header />
 
 <main class="content">
-  <section class="welcome">
-    <h1>Bienvenido a CyberThink</h1>
-    <p>Has iniciado sesión correctamente. Esta es una pantalla de prueba.</p>
+  <section class="intro">
+    <h1>Temas de ciberseguridad</h1>
+    <p>
+      Explora las lecciones y videos, y pon a prueba lo aprendido con un cuestionario.
+    </p>
   </section>
 
-  <section class="cards">
-    <article class="card">
-      <h2>Frontend</h2>
-      <p>Angular + Vite</p>
-    </article>
-    <article class="card">
-      <h2>Backend</h2>
-      <p>Node + Express</p>
-    </article>
-    <article class="card">
-      <h2>Base de datos</h2>
-      <p>MongoDB Atlas</p>
-    </article>
-  </section>
+  @if (loading()) {
+    <p class="state">Cargando temas...</p>
+  } @else if (error()) {
+    <p class="state error">{{ error() }}</p>
+  } @else {
+    <section class="grid">
+      @for (topic of topics(); track topic._id) {
+        <a class="card" [routerLink]="['/topics', topic.slug]">
+          <h2>{{ topic.name }}</h2>
+          <p>{{ topic.description }}</p>
+          <span class="meta">
+            {{ topic.lessonCount }} lecciones · {{ topic.videoCount }} videos
+          </span>
+        </a>
+      }
+    </section>
+  }
 </main>

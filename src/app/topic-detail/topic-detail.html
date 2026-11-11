@@ -1,0 +1,52 @@
+<app-header />
+
+<main class="content">
+  @if (loading()) {
+    <p class="state">Cargando tema...</p>
+  } @else if (error()) {
+    <p class="state error">{{ error() }}</p>
+    <a class="back" routerLink="/home">← Volver a temas</a>
+  } @else if (data(); as d) {
+    <a class="back" routerLink="/home">← Volver a temas</a>
+
+    <h1>{{ d.topic.name }}</h1>
+    <p class="description">{{ d.topic.description }}</p>
+
+    <section class="block">
+      <h2>Lecciones</h2>
+      <ul class="lesson-list">
+        @for (lesson of d.lessons; track lesson._id) {
+          <li>
+            <a [routerLink]="['/lessons', lesson._id]">{{ lesson.title }}</a>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="block">
+      <h2>Videos</h2>
+      @for (video of d.videos; track video._id) {
+        <article class="video">
+          <h3>{{ video.title }}</h3>
+          @if (video.url) {
+            <iframe
+              [src]="video.url | safeUrl"
+              [title]="video.title"
+              allowfullscreen
+            ></iframe>
+          } @else {
+            <p class="pending">Video pendiente de configurar.</p>
+          }
+          <p class="video-description">{{ video.description }}</p>
+        </article>
+      }
+    </section>
+
+    @if (d.quiz; as quiz) {
+      <section class="block quiz-cta">
+        <h2>Pon a prueba lo aprendido</h2>
+        <a class="button" [routerLink]="['/quizzes', quiz._id]">Comenzar cuestionario</a>
+      </section>
+    }
+  }
+</main>

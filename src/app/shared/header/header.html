@@ -1,0 +1,7 @@
+<header class="topbar">
+  <a class="brand" routerLink="/home">CyberThink</a>
+  <div class="session">
+    <span>Hola, {{ user() }}</span>
+    <button type="button" (click)="logout()">Cerrar sesión</button>
+  </div>
+</header>

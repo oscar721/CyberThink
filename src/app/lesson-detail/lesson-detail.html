@@ -1,0 +1,18 @@
+<app-header />
+
+<main class="content">
+  @if (loading()) {
+    <p class="state">Cargando lección...</p>
+  } @else if (error()) {
+    <p class="state error">{{ error() }}</p>
+  } @else if (lesson(); as l) {
+    <a class="back" [routerLink]="['/topics', l.topic.slug]">← Volver al tema</a>
+
+    <article class="lesson">
+      <h1>{{ l.title }}</h1>
+      @for (paragraph of paragraphs(l.content); track $index) {
+        <p>{{ paragraph }}</p>
+      }
+    </article>
+  }
+</main>

@@ -1,0 +1,61 @@
+<app-header />
+
+<main class="content">
+  @if (loading()) {
+    <p class="state">Cargando cuestionario...</p>
+  } @else if (error()) {
+    <p class="state error">{{ error() }}</p>
+    <a class="back" routerLink="/home">← Volver a temas</a>
+  } @else if (result(); as r) {
+    <section class="result" [class.pass]="r.passed" [class.fail]="!r.passed">
+      <h1>{{ r.passed ? '¡Aprobado!' : 'No aprobado' }}</h1>
+      <p class="score">{{ r.score }}%</p>
+      <p>Respondiste correctamente {{ r.correct }} de {{ r.total }} preguntas.</p>
+      <p>Nota mínima para aprobar: {{ r.passingScore }}%</p>
+
+      <ul class="detail">
+        @for (item of r.detail; track $index) {
+          <li [class.correct]="item.isCorrect" [class.wrong]="!item.isCorrect">
+            <span>{{ item.isCorrect ? '✓' : '✗' }}</span>
+            {{ item.text }}
+          </li>
+        }
+      </ul>
+
+      <a class="button" routerLink="/home">Volver a temas</a>
+    </section>
+  } @else if (quiz(); as q) {
+    <a class="back" routerLink="/home">← Volver a temas</a>
+
+    <h1>{{ q.title }}</h1>
+    <p class="hint">Selecciona una respuesta por pregunta. Aprueba con {{ q.passingScore }}%.</p>
+
+    <div class="questions">
+      @for (question of q.questions; track $index; let qi = $index) {
+        <fieldset class="question">
+          <legend>{{ qi + 1 }}. {{ question.text }}</legend>
+          @for (option of question.options; track $index; let oi = $index) {
+            <label class="option">
+              <input
+                type="radio"
+                [name]="'question-' + qi"
+                [checked]="answers()[qi] === oi"
+                (change)="select(qi, oi)"
+              />
+              <span>{{ option }}</span>
+            </label>
+          }
+        </fieldset>
+      }
+    </div>
+
+    <button
+      type="button"
+      class="button"
+      [disabled]="submitting() || !answered()"
+      (click)="submit()"
+    >
+      {{ submitting() ? 'Enviando...' : 'Enviar respuestas' }}
+    </button>
+  }
+</main>
