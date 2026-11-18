@@ -1,0 +1,909 @@
+<div class="admin-shell">
+  <aside class="sidebar" [class.open]="menuOpen()">
+    <a class="brand" routerLink="/admin">
+      <span class="brand-mark"><app-icon name="shield" [size]="22" /></span>
+      <span class="brand-text">Cyber<span>Think</span></span>
+    </a>
+
+    <div class="admin-identity">
+      <span class="avatar">{{ initial() }}</span>
+      <span class="identity-meta">
+        <strong>{{ user()?.username }}</strong>
+        <span>Administrador</span>
+      </span>
+    </div>
+
+    <nav class="side-nav" aria-label="Navegación de administración">
+      @for (item of navItems; track item.tab) {
+        <button
+          type="button"
+          class="side-link"
+          [class.active]="activeTab() === item.tab"
+          (click)="setTab(item.tab)"
+        >
+          <app-icon [name]="item.icon" [size]="18" />
+          <span>{{ item.label }}</span>
+          @if (item.tab === 'results') {
+            <span class="nav-count">{{ stats()?.attempts ?? 0 }}</span>
+          }
+        </button>
+      }
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-note">
+        <app-icon name="lock" [size]="15" />
+        <span>Acceso exclusivo para administradores.</span>
+      </div>
+      <button type="button" class="side-link danger" (click)="logout()">
+        <app-icon name="logout" [size]="18" />
+        <span>Cerrar sesión</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="sidebar-backdrop" [class.show]="menuOpen()" (click)="menuOpen.set(false)"></div>
+
+  <div class="admin-main">
+    <header class="admin-top">
+      <button
+        class="menu-btn"
+        type="button"
+        (click)="menuOpen.set(true)"
+        aria-label="Abrir menú"
+      >
+        <app-icon name="menu" [size]="20" />
+      </button>
+
+      <div class="top-title">
+        <span class="crumb">CyberThink · Administración</span>
+        <h1>{{ tabTitle() }}</h1>
+      </div>
+
+      <div class="top-actions">
+        <span class="status"><span class="dot"></span> En línea</span>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="refresh()">
+          <app-icon name="chart" [size]="15" />
+          Actualizar
+        </button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      @if (message()) {
+        <div class="alert success" role="status">
+          <app-icon name="check" [size]="17" />
+          {{ message() }}
+          <button type="button" (click)="message.set('')" aria-label="Cerrar aviso">
+            <app-icon name="x" [size]="15" />
+          </button>
+        </div>
+      }
+
+      @if (error()) {
+        <div class="alert danger" role="alert">
+          <app-icon name="alert" [size]="17" />
+          {{ error() }}
+          <button type="button" (click)="error.set('')" aria-label="Cerrar aviso">
+            <app-icon name="x" [size]="15" />
+          </button>
+        </div>
+      }
+
+      @if (loading()) {
+        <div class="state">
+          <span class="spinner"></span>
+          Cargando panel de administración...
+        </div>
+      } @else {
+        @switch (activeTab()) {
+          @case ('dashboard') {
+            <section class="dash fade-up">
+              <div class="dash-hero">
+                <div>
+                  <span class="eyebrow">Panel de control</span>
+                  <h2>Todo tu contenido en un solo lugar.</h2>
+                  <p>
+                    Gestiona los módulos, lecciones, videos y cuestionarios, revisa
+                    los intentos de los estudiantes y administra sus roles.
+                  </p>
+                </div>
+                <div class="quick-actions">
+                  <button class="btn btn-primary btn-sm" type="button" (click)="newTopic()">
+                    <app-icon name="plus" [size]="15" /> Nuevo módulo
+                  </button>
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="newLesson()">
+                    <app-icon name="plus" [size]="15" /> Nueva lección
+                  </button>
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="newVideo()">
+                    <app-icon name="plus" [size]="15" /> Nuevo video
+                  </button>
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="newQuiz()">
+                    <app-icon name="plus" [size]="15" /> Nuevo cuestionario
+                  </button>
+                </div>
+              </div>
+
+              <div class="stat-grid">
+                @for (stat of dashboardStats(); track stat.label) {
+                  <button
+                    class="stat-card"
+                    type="button"
+                    [class]="'stat-card accent-' + stat.accent"
+                    (click)="setTab(stat.tab)"
+                  >
+                    <span class="stat-icon"><app-icon [name]="stat.icon" [size]="20" /></span>
+                    <span class="stat-body">
+                      <strong>{{ stat.value }}</strong>
+                      <span>{{ stat.label }}</span>
+                    </span>
+                    <app-icon name="arrow-right" [size]="16" class="stat-arrow" />
+                  </button>
+                }
+              </div>
+
+              <section class="panel recent-panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>Intentos recientes</h2>
+                    <p>Últimas evaluaciones enviadas por los estudiantes.</p>
+                  </div>
+                  <span class="badge">{{ stats()?.attempts ?? 0 }} en total</span>
+                </div>
+
+                @if (stats()?.recent?.length) {
+                  <div class="table-wrap">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Estudiante</th>
+                          <th>Cuestionario</th>
+                          <th>Módulo</th>
+                          <th>Nota</th>
+                          <th>Estado</th>
+                          <th>Fecha</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (attempt of stats()?.recent ?? []; track attempt._id) {
+                          <tr>
+                            <td><strong>{{ attempt.username }}</strong></td>
+                            <td>{{ attempt.quiz?.title ?? 'Sin cuestionario' }}</td>
+                            <td>{{ attempt.quiz?.topic?.name ?? '—' }}</td>
+                            <td><strong>{{ attempt.score }}%</strong></td>
+                            <td>
+                              <span
+                                class="badge"
+                                [class.badge-success]="attempt.passed"
+                                [class.badge-danger]="!attempt.passed"
+                              >
+                                {{ attempt.passed ? 'Aprobado' : 'No aprobado' }}
+                              </span>
+                            </td>
+                            <td>{{ attempt.createdAt | date: 'dd/MM/yyyy · HH:mm' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <div class="table-empty">
+                    <app-icon name="chart" [size]="26" />
+                    Todavía no hay intentos registrados.
+                  </div>
+                }
+              </section>
+            </section>
+          }
+
+          @case ('topics') {
+            <section class="tab-section fade-up">
+              <div class="section-toolbar">
+                <div>
+                  <h2>Módulos</h2>
+                  <p>Crea y organiza los bloques temáticos del curso.</p>
+                </div>
+                <button class="btn btn-primary" type="button" (click)="newTopic()">
+                  <app-icon name="plus" [size]="16" /> Nuevo módulo
+                </button>
+              </div>
+
+              @if (formKind() === 'topics') {
+                <section class="editor panel" id="admin-form">
+                  <div class="editor-head">
+                    <div>
+                      <h3>{{ formTitle() }}</h3>
+                      <p>El slug se genera desde el nombre si lo dejas vacío.</p>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="closeForm()">
+                      <app-icon name="x" [size]="15" /> Cerrar
+                    </button>
+                  </div>
+
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>Nombre *</span>
+                      <input class="input" name="topicName" [(ngModel)]="topicForm.name" placeholder="Ej. Contraseñas y autenticación" />
+                    </label>
+                    <label class="field">
+                      <span>Slug</span>
+                      <input class="input" name="topicSlug" [(ngModel)]="topicForm.slug" placeholder="se-genera-automaticamente" />
+                    </label>
+                    <label class="field">
+                      <span>Orden</span>
+                      <input class="input" type="number" name="topicOrder" [(ngModel)]="topicForm.order" min="0" />
+                    </label>
+                    <label class="check-field">
+                      <input type="checkbox" name="topicPublished" [(ngModel)]="topicForm.published" />
+                      <span>Publicado para estudiantes</span>
+                    </label>
+                    <label class="field span-2">
+                      <span>Descripción</span>
+                      <textarea class="textarea" name="topicDescription" [(ngModel)]="topicForm.description" placeholder="Resumen breve del módulo"></textarea>
+                    </label>
+                    <label class="field span-2">
+                      <span>URL de imagen (opcional)</span>
+                      <input class="input" name="topicImage" [(ngModel)]="topicForm.imageUrl" placeholder="https://... (ilustración pendiente)" />
+                    </label>
+                  </div>
+
+                  <div class="editor-actions">
+                    <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="saveTopic()">
+                      {{ saving() ? 'Guardando...' : 'Guardar módulo' }}
+                    </button>
+                    <button class="btn btn-ghost" type="button" (click)="closeForm()">Cancelar</button>
+                  </div>
+                </section>
+              }
+
+              @if (topics().length) {
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Orden</th>
+                        <th>Módulo</th>
+                        <th>Contenido</th>
+                        <th>Estado</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (topic of topics(); track topic._id) {
+                        <tr>
+                          <td>{{ topic.order }}</td>
+                          <td>
+                            <strong>{{ topic.name }}</strong>
+                            <span class="sub">{{ topic.slug }}</span>
+                          </td>
+                          <td>
+                            <span class="mini-meta">
+                              {{ topic.lessonCount }}
+                              {{ topic.lessonCount === 1 ? 'lección' : 'lecciones' }} ·
+                              {{ topic.videoCount }}
+                              {{ topic.videoCount === 1 ? 'video' : 'videos' }} ·
+                              {{ topic.quizCount }}
+                              {{ topic.quizCount === 1 ? 'cuestionario' : 'cuestionarios' }}
+                            </span>
+                          </td>
+                          <td>
+                            <span class="badge" [class.badge-success]="topic.published" [class.badge-warning]="!topic.published">
+                              {{ topic.published ? 'Publicado' : 'Borrador' }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="row-actions">
+                              <button class="btn btn-ghost btn-icon" type="button" title="Editar" (click)="openTopicForm(topic)">
+                                <app-icon name="edit" [size]="16" />
+                              </button>
+                              <button class="btn btn-ghost btn-icon" type="button" [title]="topic.published ? 'Despublicar' : 'Publicar'" (click)="toggleTopic(topic)">
+                                <app-icon [name]="topic.published ? 'eye-off' : 'eye'" [size]="16" />
+                              </button>
+                              <button class="btn btn-danger btn-icon" type="button" title="Eliminar" (click)="deleteTopic(topic)">
+                                <app-icon name="trash" [size]="16" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="table-empty">
+                  <app-icon name="book" [size]="26" />
+                  No hay módulos todavía. Crea el primero con el botón superior.
+                </div>
+              }
+            </section>
+          }
+
+          @case ('lessons') {
+            <section class="tab-section fade-up">
+              <div class="section-toolbar">
+                <div>
+                  <h2>Lecciones</h2>
+                  <p>Contenido, objetivos, ejemplos y recomendaciones de cada módulo.</p>
+                </div>
+                <div class="toolbar-actions">
+                  <select class="select filter-select" name="lessonFilter" [ngModel]="lessonFilter()" (ngModelChange)="lessonFilter.set($event)">
+                    <option value="">Todos los módulos</option>
+                    @for (topic of topics(); track topic._id) {
+                      <option [value]="topic._id">{{ topic.name }}</option>
+                    }
+                  </select>
+                  <button class="btn btn-primary" type="button" (click)="newLesson()">
+                    <app-icon name="plus" [size]="16" /> Nueva lección
+                  </button>
+                </div>
+              </div>
+
+              @if (formKind() === 'lessons') {
+                <section class="editor panel" id="admin-form">
+                  <div class="editor-head">
+                    <div>
+                      <h3>{{ formTitle() }}</h3>
+                      <p>Escribe una línea por objetivo y por recomendación.</p>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="closeForm()">
+                      <app-icon name="x" [size]="15" /> Cerrar
+                    </button>
+                  </div>
+
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>Módulo *</span>
+                      <select class="select" name="lessonTopic" [(ngModel)]="lessonForm.topic">
+                        <option value="">Selecciona un módulo</option>
+                        @for (topic of topics(); track topic._id) {
+                          <option [value]="topic._id">{{ topic.name }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>Orden</span>
+                      <input class="input" type="number" name="lessonOrder" [(ngModel)]="lessonForm.order" min="0" />
+                    </label>
+                    <label class="field span-2">
+                      <span>Título *</span>
+                      <input class="input" name="lessonTitle" [(ngModel)]="lessonForm.title" placeholder="Ej. Contraseñas robustas" />
+                    </label>
+                    <label class="field span-2">
+                      <span>Introducción</span>
+                      <textarea class="textarea" name="lessonIntro" [(ngModel)]="lessonForm.introduction" placeholder="Resumen inicial de la lección"></textarea>
+                    </label>
+                    <label class="field">
+                      <span>Objetivos (uno por línea)</span>
+                      <textarea class="textarea" name="lessonObjectives" [(ngModel)]="lessonForm.objectivesText" placeholder="Identificar...&#10;Aplicar..."></textarea>
+                    </label>
+                    <label class="field">
+                      <span>Recomendaciones (una por línea)</span>
+                      <textarea class="textarea" name="lessonRecommendations" [(ngModel)]="lessonForm.recommendationsText" placeholder="Usa...&#10;Activa..."></textarea>
+                    </label>
+                    <label class="field span-2">
+                      <span>Contenido</span>
+                      <textarea class="textarea content-area" name="lessonContent" [(ngModel)]="lessonForm.content" placeholder="Contenido de la lección. Separa los párrafos con una línea en blanco."></textarea>
+                    </label>
+                    <label class="field span-2">
+                      <span>Ejemplo</span>
+                      <textarea class="textarea" name="lessonExample" [(ngModel)]="lessonForm.example" placeholder="Ejemplo práctico o caso real"></textarea>
+                    </label>
+                    <label class="field span-2">
+                      <span>URL de imagen (opcional)</span>
+                      <input class="input" name="lessonImage" [(ngModel)]="lessonForm.imageUrl" placeholder="https://... (ilustración pendiente)" />
+                    </label>
+                    <label class="check-field span-2">
+                      <input type="checkbox" name="lessonPublished" [(ngModel)]="lessonForm.published" />
+                      <span>Publicada para estudiantes</span>
+                    </label>
+                  </div>
+
+                  <div class="editor-actions">
+                    <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="saveLesson()">
+                      {{ saving() ? 'Guardando...' : 'Guardar lección' }}
+                    </button>
+                    <button class="btn btn-ghost" type="button" (click)="closeForm()">Cancelar</button>
+                  </div>
+                </section>
+              }
+
+              @if (filteredLessons().length) {
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Módulo</th>
+                        <th>Lección</th>
+                        <th>Orden</th>
+                        <th>Estado</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (lesson of filteredLessons(); track lesson._id) {
+                        <tr>
+                          <td>{{ topicNameOf(lesson.topic) }}</td>
+                          <td><strong>{{ lesson.title }}</strong></td>
+                          <td>{{ lesson.order }}</td>
+                          <td>
+                            <span class="badge" [class.badge-success]="lesson.published" [class.badge-warning]="!lesson.published">
+                              {{ lesson.published ? 'Publicada' : 'Borrador' }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="row-actions">
+                              <button class="btn btn-ghost btn-icon" type="button" title="Editar" (click)="openLessonForm(lesson)">
+                                <app-icon name="edit" [size]="16" />
+                              </button>
+                              <button class="btn btn-ghost btn-icon" type="button" [title]="lesson.published ? 'Despublicar' : 'Publicar'" (click)="toggleLesson(lesson)">
+                                <app-icon [name]="lesson.published ? 'eye-off' : 'eye'" [size]="16" />
+                              </button>
+                              <button class="btn btn-danger btn-icon" type="button" title="Eliminar" (click)="deleteLesson(lesson)">
+                                <app-icon name="trash" [size]="16" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="table-empty">
+                  <app-icon name="list" [size]="26" />
+                  No hay lecciones para el filtro seleccionado.
+                </div>
+              }
+            </section>
+          }
+
+          @case ('videos') {
+            <section class="tab-section fade-up">
+              <div class="section-toolbar">
+                <div>
+                  <h2>Videos</h2>
+                  <p>Asocia recursos audiovisuales a un módulo o a una lección concreta.</p>
+                </div>
+                <div class="toolbar-actions">
+                  <select class="select filter-select" name="videoFilter" [ngModel]="videoFilter()" (ngModelChange)="videoFilter.set($event)">
+                    <option value="">Todos los módulos</option>
+                    @for (topic of topics(); track topic._id) {
+                      <option [value]="topic._id">{{ topic.name }}</option>
+                    }
+                  </select>
+                  <button class="btn btn-primary" type="button" (click)="newVideo()">
+                    <app-icon name="plus" [size]="16" /> Nuevo video
+                  </button>
+                </div>
+              </div>
+
+              @if (formKind() === 'videos') {
+                <section class="editor panel" id="admin-form">
+                  <div class="editor-head">
+                    <div>
+                      <h3>{{ formTitle() }}</h3>
+                      <p>Usa una URL de YouTube; se mostrará como reproductor embebido.</p>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="closeForm()">
+                      <app-icon name="x" [size]="15" /> Cerrar
+                    </button>
+                  </div>
+
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>Módulo *</span>
+                      <select class="select" name="videoTopic" [ngModel]="videoForm.topic" (ngModelChange)="setVideoTopic($event)">
+                        <option value="">Selecciona un módulo</option>
+                        @for (topic of topics(); track topic._id) {
+                          <option [value]="topic._id">{{ topic.name }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>Lección (opcional)</span>
+                      <select class="select" name="videoLesson" [(ngModel)]="videoForm.lesson" [disabled]="!videoForm.topic">
+                        <option value="">Sin lección concreta</option>
+                        @for (lesson of lessonsForTopic(videoForm.topic); track lesson._id) {
+                          <option [value]="lesson._id">{{ lesson.order }}. {{ lesson.title }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field span-2">
+                      <span>Título *</span>
+                      <input class="input" name="videoTitle" [(ngModel)]="videoForm.title" placeholder="Ej. Cómo crear contraseñas seguras" />
+                    </label>
+                    <label class="field span-2">
+                      <span>URL del video</span>
+                      <input class="input" name="videoUrl" [(ngModel)]="videoForm.url" placeholder="https://www.youtube.com/watch?v=..." />
+                    </label>
+                    <label class="field">
+                      <span>Orden</span>
+                      <input class="input" type="number" name="videoOrder" [(ngModel)]="videoForm.order" min="0" />
+                    </label>
+                    <label class="check-field">
+                      <input type="checkbox" name="videoPublished" [(ngModel)]="videoForm.published" />
+                      <span>Publicado para estudiantes</span>
+                    </label>
+                    <label class="field span-2">
+                      <span>Descripción</span>
+                      <textarea class="textarea" name="videoDescription" [(ngModel)]="videoForm.description" placeholder="Describe brevemente el contenido del video"></textarea>
+                    </label>
+                  </div>
+
+                  <div class="editor-actions">
+                    <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="saveVideo()">
+                      {{ saving() ? 'Guardando...' : 'Guardar video' }}
+                    </button>
+                    <button class="btn btn-ghost" type="button" (click)="closeForm()">Cancelar</button>
+                  </div>
+                </section>
+              }
+
+              @if (filteredVideos().length) {
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Módulo</th>
+                        <th>Video</th>
+                        <th>Lección</th>
+                        <th>Estado</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (video of filteredVideos(); track video._id) {
+                        <tr>
+                          <td>{{ topicNameOf(video.topic) }}</td>
+                          <td>
+                            <strong>{{ video.title }}</strong>
+                            <span class="sub url">{{ video.url || 'Sin URL' }}</span>
+                          </td>
+                          <td>{{ lessonTitleOf(video.lesson) }}</td>
+                          <td>
+                            <span class="badge" [class.badge-success]="video.published" [class.badge-warning]="!video.published">
+                              {{ video.published ? 'Publicado' : 'Borrador' }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="row-actions">
+                              <button class="btn btn-ghost btn-icon" type="button" title="Editar" (click)="openVideoForm(video)">
+                                <app-icon name="edit" [size]="16" />
+                              </button>
+                              <button class="btn btn-ghost btn-icon" type="button" [title]="video.published ? 'Despublicar' : 'Publicar'" (click)="toggleVideo(video)">
+                                <app-icon [name]="video.published ? 'eye-off' : 'eye'" [size]="16" />
+                              </button>
+                              <button class="btn btn-danger btn-icon" type="button" title="Eliminar" (click)="deleteVideo(video)">
+                                <app-icon name="trash" [size]="16" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="table-empty">
+                  <app-icon name="play" [size]="26" />
+                  No hay videos para el filtro seleccionado.
+                </div>
+              }
+            </section>
+          }
+
+          @case ('quizzes') {
+            <section class="tab-section fade-up">
+              <div class="section-toolbar">
+                <div>
+                  <h2>Cuestionarios</h2>
+                  <p>Configura preguntas, opciones y la nota mínima para aprobar.</p>
+                </div>
+                <div class="toolbar-actions">
+                  <select class="select filter-select" name="quizFilter" [ngModel]="quizFilter()" (ngModelChange)="quizFilter.set($event)">
+                    <option value="">Todos los módulos</option>
+                    @for (topic of topics(); track topic._id) {
+                      <option [value]="topic._id">{{ topic.name }}</option>
+                    }
+                  </select>
+                  <button class="btn btn-primary" type="button" (click)="newQuiz()">
+                    <app-icon name="plus" [size]="16" /> Nuevo cuestionario
+                  </button>
+                </div>
+              </div>
+
+              @if (formKind() === 'quizzes') {
+                <section class="editor panel" id="admin-form">
+                  <div class="editor-head">
+                    <div>
+                      <h3>{{ formTitle() }}</h3>
+                      <p>Marca el círculo de la opción correcta en cada pregunta.</p>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="closeForm()">
+                      <app-icon name="x" [size]="15" /> Cerrar
+                    </button>
+                  </div>
+
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>Módulo *</span>
+                      <select class="select" name="quizTopic" [ngModel]="quizForm.topic" (ngModelChange)="setQuizTopic($event)">
+                        <option value="">Selecciona un módulo</option>
+                        @for (topic of topics(); track topic._id) {
+                          <option [value]="topic._id">{{ topic.name }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>Lección (opcional)</span>
+                      <select class="select" name="quizLesson" [(ngModel)]="quizForm.lesson" [disabled]="!quizForm.topic">
+                        <option value="">Sin lección concreta</option>
+                        @for (lesson of lessonsForTopic(quizForm.topic); track lesson._id) {
+                          <option [value]="lesson._id">{{ lesson.order }}. {{ lesson.title }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="field span-2">
+                      <span>Título *</span>
+                      <input class="input" name="quizTitle" [(ngModel)]="quizForm.title" placeholder="Ej. Evaluación de contraseñas" />
+                    </label>
+                    <label class="field">
+                      <span>Nota mínima (%)</span>
+                      <input class="input" type="number" name="quizPassing" [(ngModel)]="quizForm.passingScore" min="0" max="100" />
+                    </label>
+                    <label class="check-field">
+                      <input type="checkbox" name="quizPublished" [(ngModel)]="quizForm.published" />
+                      <span>Publicado para estudiantes</span>
+                    </label>
+                  </div>
+
+                  <div class="questions-editor">
+                    <div class="questions-head">
+                      <h4>Preguntas</h4>
+                      <span class="badge">
+                        {{ quizForm.questions.length }}
+                        {{ quizForm.questions.length === 1 ? 'pregunta' : 'preguntas' }}
+                      </span>
+                    </div>
+
+                    @for (question of quizForm.questions; track $index; let qi = $index) {
+                      <article class="question-editor">
+                        <div class="question-editor-head">
+                          <span class="question-badge">Pregunta {{ qi + 1 }}</span>
+                          <button class="btn btn-danger btn-icon" type="button" title="Eliminar pregunta" [disabled]="quizForm.questions.length <= 1" (click)="removeQuestion(qi)">
+                            <app-icon name="trash" [size]="15" />
+                          </button>
+                        </div>
+
+                        <label class="field">
+                          <span>Enunciado *</span>
+                          <input class="input" [name]="'quiz-q-' + qi" [(ngModel)]="question.text" placeholder="Escribe la pregunta" />
+                        </label>
+
+                        <div class="options-editor">
+                          @for (option of question.options; track $index; let oi = $index) {
+                            <div class="option-editor" [class.correct]="question.correctIndex === oi">
+                              <input
+                                type="radio"
+                                [name]="'quiz-correct-' + qi"
+                                [checked]="question.correctIndex === oi"
+                                (change)="setCorrect(qi, oi)"
+                                [attr.aria-label]="'Marcar opción ' + (oi + 1) + ' como correcta'"
+                              />
+                              <input
+                                class="input"
+                                [name]="'quiz-q-' + qi + '-o-' + oi"
+                                [(ngModel)]="question.options[oi]"
+                                [placeholder]="'Opción ' + (oi + 1)"
+                              />
+                              <button class="btn btn-ghost btn-icon" type="button" title="Quitar opción" [disabled]="question.options.length <= 2" (click)="removeOption(qi, oi)">
+                                <app-icon name="x" [size]="14" />
+                              </button>
+                            </div>
+                          }
+                        </div>
+
+                        <div class="question-editor-foot">
+                          <button class="btn btn-ghost btn-sm" type="button" (click)="addOption(qi)">
+                            <app-icon name="plus" [size]="14" /> Añadir opción
+                          </button>
+                          <span class="hint">Marca el círculo de la respuesta correcta.</span>
+                        </div>
+                      </article>
+                    }
+                  </div>
+
+                  <button class="btn btn-ghost add-question" type="button" (click)="addQuestion()">
+                    <app-icon name="plus" [size]="15" /> Añadir pregunta
+                  </button>
+
+                  <div class="editor-actions">
+                    <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="saveQuiz()">
+                      {{ saving() ? 'Guardando...' : 'Guardar cuestionario' }}
+                    </button>
+                    <button class="btn btn-ghost" type="button" (click)="closeForm()">Cancelar</button>
+                  </div>
+                </section>
+              }
+
+              @if (filteredQuizzes().length) {
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Módulo</th>
+                        <th>Cuestionario</th>
+                        <th>Preguntas</th>
+                        <th>Nota mínima</th>
+                        <th>Estado</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (quiz of filteredQuizzes(); track quiz._id) {
+                        <tr>
+                          <td>{{ topicNameOf(quiz.topic) }}</td>
+                          <td>
+                            <strong>{{ quiz.title }}</strong>
+                            <span class="sub">{{ lessonTitleOf(quiz.lesson) }}</span>
+                          </td>
+                          <td>{{ questionCount(quiz) }}</td>
+                          <td>{{ quiz.passingScore }}%</td>
+                          <td>
+                            <span class="badge" [class.badge-success]="quiz.published" [class.badge-warning]="!quiz.published">
+                              {{ quiz.published ? 'Publicado' : 'Borrador' }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="row-actions">
+                              <button class="btn btn-ghost btn-icon" type="button" title="Editar" (click)="openQuizForm(quiz)">
+                                <app-icon name="edit" [size]="16" />
+                              </button>
+                              <button class="btn btn-ghost btn-icon" type="button" [title]="quiz.published ? 'Despublicar' : 'Publicar'" (click)="toggleQuiz(quiz)">
+                                <app-icon [name]="quiz.published ? 'eye-off' : 'eye'" [size]="16" />
+                              </button>
+                              <button class="btn btn-danger btn-icon" type="button" title="Eliminar" (click)="deleteQuiz(quiz)">
+                                <app-icon name="trash" [size]="16" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="table-empty">
+                  <app-icon name="clipboard" [size]="26" />
+                  No hay cuestionarios para el filtro seleccionado.
+                </div>
+              }
+            </section>
+          }
+
+          @case ('users') {
+            <section class="tab-section fade-up">
+              <div class="section-toolbar">
+                <div>
+                  <h2>Usuarios y roles</h2>
+                  <p>Asigna permisos de administrador o estudiante a las cuentas existentes.</p>
+                </div>
+                <span class="badge">{{ users().length }} cuentas</span>
+              </div>
+
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Rol</th>
+                      <th>Cuenta creada</th>
+                      <th>Permisos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (account of users(); track account._id) {
+                      <tr>
+                        <td>
+                          <div class="user-cell">
+                            <span class="small-avatar">{{ account.username.charAt(0).toUpperCase() }}</span>
+                            <strong>{{ account.username }}</strong>
+                            @if (account.username === user()?.username) {
+                              <span class="badge badge-cyan">Tú</span>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <select
+                            class="select role-select"
+                            [value]="account.role"
+                            [disabled]="account.username === user()?.username"
+                            (change)="changeRole(account, $any($event.target).value, $event)"
+                          >
+                            <option value="student">Estudiante</option>
+                            <option value="admin">Administrador</option>
+                          </select>
+                        </td>
+                        <td>{{ account.createdAt | date: 'dd/MM/yyyy' }}</td>
+                        <td>
+                          <span class="badge" [class.badge-cyan]="account.role === 'admin'" [class.badge-success]="account.role === 'student'">
+                            {{ roleLabel(account.role) }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <p class="note">
+                <app-icon name="lock" [size]="15" />
+                Debe existir al menos un administrador. No puedes cambiar tu propio rol.
+              </p>
+            </section>
+          }
+
+          @case ('results') {
+            <section class="tab-section fade-up">
+              <div class="section-toolbar">
+                <div>
+                  <h2>Resultados de estudiantes</h2>
+                  <p>Historial de intentos de todos los cuestionarios.</p>
+                </div>
+                <span class="badge">
+                  {{ results().length }}
+                  {{ results().length === 1 ? 'registro' : 'registros' }}
+                </span>
+              </div>
+
+              @if (results().length) {
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Estudiante</th>
+                        <th>Cuestionario</th>
+                        <th>Módulo</th>
+                        <th>Puntuación</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (attempt of results(); track attempt._id) {
+                        <tr>
+                          <td><strong>{{ attempt.username }}</strong></td>
+                          <td>{{ attempt.quiz?.title ?? 'Sin cuestionario' }}</td>
+                          <td>{{ attempt.quiz?.topic?.name ?? '—' }}</td>
+                          <td>
+                            <div class="score-cell">
+                              <span class="mini-bar">
+                                <span [style.width.%]="attempt.score" [class.failed]="!attempt.passed"></span>
+                              </span>
+                              <strong>{{ attempt.score }}%</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <span class="badge" [class.badge-success]="attempt.passed" [class.badge-danger]="!attempt.passed">
+                              {{ attempt.passed ? 'Aprobado' : 'No aprobado' }}
+                            </span>
+                          </td>
+                          <td>{{ attempt.createdAt | date: 'dd/MM/yyyy · HH:mm' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="table-empty">
+                  <app-icon name="award" [size]="26" />
+                  Todavía no hay resultados registrados.
+                </div>
+              }
+            </section>
+          }
+        }
+      }
+    </div>
+  </div>
+</div>

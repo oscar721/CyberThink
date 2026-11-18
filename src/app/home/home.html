@@ -1,28 +1,133 @@
 <app-header />
 
-<main class="content">
-  <section class="intro">
-    <h1>Temas de ciberseguridad</h1>
-    <p>
-      Explora las lecciones y videos, y pon a prueba lo aprendido con un cuestionario.
-    </p>
-  </section>
+<main class="page">
+  <div class="container">
+    <section class="hero fade-up">
+      <div class="hero-copy">
+        <span class="eyebrow">Panel del estudiante</span>
+        <h1>Hola, <span>{{ user()?.username }}</span>.</h1>
+        <p>
+          Tu ruta de ciberseguridad está lista. Avanza por los módulos, mira los
+          videos y comprueba lo aprendido con cada cuestionario.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#modulos">
+            Explorar módulos
+            <app-icon name="arrow-right" [size]="17" />
+          </a>
+          <a class="btn btn-ghost" routerLink="/results">
+            <app-icon name="award" [size]="17" />
+            Mis resultados
+          </a>
+        </div>
+      </div>
 
-  @if (loading()) {
-    <p class="state">Cargando temas...</p>
-  } @else if (error()) {
-    <p class="state error">{{ error() }}</p>
-  } @else {
-    <section class="grid">
-      @for (topic of topics(); track topic._id) {
-        <a class="card" [routerLink]="['/topics', topic.slug]">
-          <h2>{{ topic.name }}</h2>
-          <p>{{ topic.description }}</p>
-          <span class="meta">
-            {{ topic.lessonCount }} lecciones · {{ topic.videoCount }} videos
-          </span>
-        </a>
+      <aside class="hero-panel">
+        <div class="panel-head">
+          <span>Tu progreso</span>
+          <span class="panel-icon"><app-icon name="chart" [size]="18" /></span>
+        </div>
+        <div class="progress-stats">
+          <div>
+            <strong>{{ progress()?.attempts ?? 0 }}</strong>
+            <span>Intentos</span>
+          </div>
+          <div>
+            <strong>{{ progress()?.passed ?? 0 }}</strong>
+            <span>Aprobados</span>
+          </div>
+          <div>
+            <strong>{{ progress()?.average ?? 0 }}<small>%</small></strong>
+            <span>Promedio</span>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <span [style.width.%]="progress()?.average ?? 0"></span>
+        </div>
+        <div class="panel-foot">
+          <span>{{ progress()?.topics ?? topics().length }} módulos</span>
+          <span>{{ progress()?.lessons ?? 0 }} lecciones</span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section" id="modulos">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Contenido</span>
+          <h2>Módulos de aprendizaje</h2>
+          <p>Cinco bloques temáticos, tres lecciones por módulo y un cuestionario final.</p>
+        </div>
+        @if (!loading() && !error()) {
+          <span class="badge">{{ topics().length }} módulos</span>
+        }
+      </div>
+
+      @if (loading()) {
+        <div class="modules" aria-label="Cargando módulos">
+          @for (item of [1, 2, 3, 4, 5]; track item) {
+            <div class="module-skeleton">
+              <span class="skeleton icon-skeleton"></span>
+              <span class="skeleton line line-lg"></span>
+              <span class="skeleton line"></span>
+              <span class="skeleton line line-sm"></span>
+            </div>
+          }
+        </div>
+      } @else if (error()) {
+        <div class="state error">
+          <app-icon name="alert" [size]="30" />
+          {{ error() }}
+          <button class="btn btn-ghost btn-sm" type="button" (click)="load()">Reintentar</button>
+        </div>
+      } @else if (!topics().length) {
+        <div class="state">
+          <app-icon name="book" [size]="30" />
+          Todavía no hay módulos publicados.
+        </div>
+      } @else {
+        <div class="modules">
+          @for (topic of topics(); track topic._id; let i = $index) {
+            <a [class]="'module-card ' + accent(i)" [routerLink]="['/topics', topic.slug]">
+              <div class="module-top">
+                <span class="module-icon"><app-icon [name]="moduleIcon(topic.slug)" [size]="24" /></span>
+                <span class="module-index">{{ moduleNumber(i) }}</span>
+              </div>
+              <h3>{{ topic.name }}</h3>
+              <p>{{ topic.description }}</p>
+              <div class="module-meta">
+                <span><app-icon name="book" [size]="15" /> {{ topic.lessonCount }} lecciones</span>
+                <span><app-icon name="play" [size]="15" /> {{ topic.videoCount }} video</span>
+              </div>
+              <div class="module-foot">
+                <span class="badge" [class.badge-success]="topic.quiz">
+                  <app-icon name="clipboard" [size]="13" />
+                  {{ topic.quiz ? 'Cuestionario disponible' : 'Sin cuestionario' }}
+                </span>
+                <span class="module-cta">
+                  Explorar
+                  <app-icon name="arrow-right" [size]="16" />
+                </span>
+              </div>
+            </a>
+          }
+        </div>
       }
     </section>
-  }
+
+    <section class="tip-panel">
+      <span class="tip-icon"><app-icon name="target" [size]="24" /></span>
+      <div>
+        <strong>Consejo de seguridad</strong>
+        <p>
+          Usa contraseñas largas y diferentes para cada servicio, y activa la
+          verificación en dos pasos siempre que esté disponible.
+        </p>
+      </div>
+      <a class="btn btn-ghost btn-sm" routerLink="/topics/contrasenas-autenticacion">
+        Ver módulo
+        <app-icon name="arrow-right" [size]="15" />
+      </a>
+    </section>
+  </div>
 </main>

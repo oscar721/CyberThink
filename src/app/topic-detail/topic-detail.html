@@ -1,52 +1,125 @@
 <app-header />
 
-<main class="content">
-  @if (loading()) {
-    <p class="state">Cargando tema...</p>
-  } @else if (error()) {
-    <p class="state error">{{ error() }}</p>
-    <a class="back" routerLink="/home">← Volver a temas</a>
-  } @else if (data(); as d) {
-    <a class="back" routerLink="/home">← Volver a temas</a>
+<main class="page">
+  <div class="container">
+    @if (loading()) {
+      <div class="state">
+        <span class="spinner"></span>
+        Cargando módulo...
+      </div>
+    } @else if (error()) {
+      <div class="state error">
+        <app-icon name="alert" [size]="30" />
+        {{ error() }}
+        <a class="btn btn-ghost btn-sm" routerLink="/home">Volver a los módulos</a>
+      </div>
+    } @else if (data(); as d) {
+      <nav class="breadcrumb fade-up" aria-label="Migas de pan">
+        <a routerLink="/home">Inicio</a>
+        <span>/</span>
+        <span>{{ d.topic.name }}</span>
+      </nav>
 
-    <h1>{{ d.topic.name }}</h1>
-    <p class="description">{{ d.topic.description }}</p>
-
-    <section class="block">
-      <h2>Lecciones</h2>
-      <ul class="lesson-list">
-        @for (lesson of d.lessons; track lesson._id) {
-          <li>
-            <a [routerLink]="['/lessons', lesson._id]">{{ lesson.title }}</a>
-          </li>
+      <section [class]="'module-hero fade-up ' + accent(d.topic.order)">
+        <div class="hero-emblem">
+          <app-icon [name]="moduleIcon(d.topic.slug)" [size]="54" />
+        </div>
+        <div class="hero-main">
+          <span class="eyebrow">Módulo {{ moduleNumber(d.topic.order) }}</span>
+          <h1>{{ d.topic.name }}</h1>
+          <p>{{ d.topic.description }}</p>
+          <div class="hero-meta">
+            <span><app-icon name="book" [size]="16" /> {{ d.lessons.length }} lecciones</span>
+            <span><app-icon name="play" [size]="16" /> {{ d.videos.length }} video</span>
+            <span><app-icon name="clipboard" [size]="16" /> Cuestionario final</span>
+          </div>
+        </div>
+        @if (d.quiz; as quiz) {
+          <a class="btn btn-primary hero-cta" [routerLink]="['/quizzes', quiz._id]">
+            Ir al cuestionario
+            <app-icon name="arrow-right" [size]="17" />
+          </a>
         }
-      </ul>
-    </section>
-
-    <section class="block">
-      <h2>Videos</h2>
-      @for (video of d.videos; track video._id) {
-        <article class="video">
-          <h3>{{ video.title }}</h3>
-          @if (video.url) {
-            <iframe
-              [src]="video.url | safeUrl"
-              [title]="video.title"
-              allowfullscreen
-            ></iframe>
-          } @else {
-            <p class="pending">Video pendiente de configurar.</p>
-          }
-          <p class="video-description">{{ video.description }}</p>
-        </article>
-      }
-    </section>
-
-    @if (d.quiz; as quiz) {
-      <section class="block quiz-cta">
-        <h2>Pon a prueba lo aprendido</h2>
-        <a class="button" [routerLink]="['/quizzes', quiz._id]">Comenzar cuestionario</a>
       </section>
+
+      <div class="layout">
+        <section class="lessons">
+          <div class="block-head">
+            <div>
+              <h2>Lecciones del módulo</h2>
+              <p>Avanza en orden para aprovechar mejor el contenido.</p>
+            </div>
+            <span class="badge">{{ d.lessons.length }} lecciones</span>
+          </div>
+
+          <div class="lesson-list">
+            @for (lesson of d.lessons; track lesson._id; let i = $index) {
+              <a class="lesson-card" [routerLink]="['/lessons', lesson._id]">
+                <span class="lesson-num">{{ i + 1 }}</span>
+                <span class="lesson-info">
+                  <strong>{{ lesson.title }}</strong>
+                  <span class="lesson-intro">{{ lesson.introduction }}</span>
+                  <span class="lesson-tags">
+                    @if (lesson.objectives?.length) {
+                      <span class="badge"><app-icon name="target" [size]="13" /> {{ lesson.objectives.length }} objetivos</span>
+                    }
+                    @if (lesson.recommendations?.length) {
+                      <span class="badge"><app-icon name="check" [size]="13" /> {{ lesson.recommendations.length }} recomendaciones</span>
+                    }
+                  </span>
+                </span>
+                <span class="lesson-go"><app-icon name="arrow-right" [size]="18" /></span>
+              </a>
+            }
+          </div>
+        </section>
+
+        <aside class="side">
+          @if (d.videos.length) {
+            <section class="panel side-panel">
+              <div class="side-head">
+                <h2>Video del módulo</h2>
+                <app-icon name="play" [size]="18" />
+              </div>
+              @for (video of d.videos; track video._id) {
+                <article class="video-item">
+                  @if (video.url) {
+                    <div class="video-frame">
+                      <iframe
+                        [src]="video.url | safeUrl"
+                        [title]="video.title"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allowfullscreen
+                        loading="lazy"
+                      ></iframe>
+                    </div>
+                  } @else {
+                    <p class="pending">Video pendiente de configurar.</p>
+                  }
+                  <h3>{{ video.title }}</h3>
+                  <p>{{ video.description }}</p>
+                </article>
+              }
+            </section>
+          }
+
+          @if (d.quiz; as quiz) {
+            <section class="panel quiz-cta">
+              <span class="quiz-icon"><app-icon name="clipboard" [size]="24" /></span>
+              <h2>Comprueba lo aprendido</h2>
+              <p>
+                Responde el cuestionario del módulo. Necesitas un
+                {{ quiz.passingScore }}% para aprobar.
+              </p>
+              <a class="btn btn-primary btn-block" [routerLink]="['/quizzes', quiz._id]">
+                Comenzar cuestionario
+                <app-icon name="arrow-right" [size]="17" />
+              </a>
+            </section>
+          }
+        </aside>
+      </div>
     }
-  }
+  </div>
 </main>

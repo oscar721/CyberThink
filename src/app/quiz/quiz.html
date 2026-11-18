@@ -1,61 +1,175 @@
 <app-header />
 
-<main class="content">
-  @if (loading()) {
-    <p class="state">Cargando cuestionario...</p>
-  } @else if (error()) {
-    <p class="state error">{{ error() }}</p>
-    <a class="back" routerLink="/home">← Volver a temas</a>
-  } @else if (result(); as r) {
-    <section class="result" [class.pass]="r.passed" [class.fail]="!r.passed">
-      <h1>{{ r.passed ? '¡Aprobado!' : 'No aprobado' }}</h1>
-      <p class="score">{{ r.score }}%</p>
-      <p>Respondiste correctamente {{ r.correct }} de {{ r.total }} preguntas.</p>
-      <p>Nota mínima para aprobar: {{ r.passingScore }}%</p>
+<main class="page">
+  <div class="container">
+    @if (loading()) {
+      <div class="state">
+        <span class="spinner"></span>
+        Cargando cuestionario...
+      </div>
+    } @else if (error() && !quiz()) {
+      <div class="state error">
+        <app-icon name="alert" [size]="30" />
+        {{ error() }}
+        <a class="btn btn-ghost btn-sm" routerLink="/home">Volver a los módulos</a>
+      </div>
+    } @else if (result(); as r) {
+      <nav class="breadcrumb fade-up" aria-label="Migas de pan">
+        <a routerLink="/home">Inicio</a>
+        <span>/</span>
+        <a [routerLink]="backLink()">{{ quiz()?.topic?.name ?? 'Cuestionario' }}</a>
+        <span>/</span>
+        <span>Resultado</span>
+      </nav>
 
-      <ul class="detail">
-        @for (item of r.detail; track $index) {
-          <li [class.correct]="item.isCorrect" [class.wrong]="!item.isCorrect">
-            <span>{{ item.isCorrect ? '✓' : '✗' }}</span>
-            {{ item.text }}
-          </li>
-        }
-      </ul>
+      <section class="result-hero fade-up" [class.passed]="r.passed" [class.failed]="!r.passed">
+        <div class="score-ring" [style.background]="scoreGradient(r)">
+          <div class="score-inner">
+            <strong>{{ r.score }}%</strong>
+            <span>{{ r.correct }} / {{ r.total }}</span>
+          </div>
+        </div>
 
-      <a class="button" routerLink="/home">Volver a temas</a>
-    </section>
-  } @else if (quiz(); as q) {
-    <a class="back" routerLink="/home">← Volver a temas</a>
+        <div class="result-copy">
+          <span class="badge" [class.badge-success]="r.passed" [class.badge-danger]="!r.passed">
+            <app-icon [name]="r.passed ? 'check' : 'x'" [size]="13" />
+            {{ r.passed ? 'Aprobado' : 'No aprobado' }}
+          </span>
+          <h1>{{ r.passed ? '¡Buen trabajo!' : 'Sigue practicando' }}</h1>
+          <p>
+            @if (r.passed) {
+              Has superado la nota mínima del {{ r.passingScore }}%. Repasa las
+              respuestas para afianzar lo aprendido.
+            } @else {
+              Necesitas al menos un {{ r.passingScore }}% para aprobar. Revisa las
+              respuestas y vuelve a intentarlo.
+            }
+          </p>
+          <div class="result-actions">
+            <button class="btn btn-primary" type="button" (click)="retry()">
+              Repetir cuestionario
+            </button>
+            <a class="btn btn-ghost" [routerLink]="backLink()">Volver al módulo</a>
+            <a class="btn btn-ghost" routerLink="/results">Mis resultados</a>
+          </div>
+        </div>
+      </section>
 
-    <h1>{{ q.title }}</h1>
-    <p class="hint">Selecciona una respuesta por pregunta. Aprueba con {{ q.passingScore }}%.</p>
+      <section class="review">
+        <div class="block-head">
+          <div>
+            <h2>Revisión de respuestas</h2>
+            <p>Consulta cuáles acertaste y cuáles puedes mejorar.</p>
+          </div>
+          <span class="badge">{{ r.total }} preguntas</span>
+        </div>
 
-    <div class="questions">
-      @for (question of q.questions; track $index; let qi = $index) {
-        <fieldset class="question">
-          <legend>{{ qi + 1 }}. {{ question.text }}</legend>
-          @for (option of question.options; track $index; let oi = $index) {
-            <label class="option">
-              <input
-                type="radio"
-                [name]="'question-' + qi"
-                [checked]="answers()[qi] === oi"
-                (change)="select(qi, oi)"
-              />
-              <span>{{ option }}</span>
-            </label>
+        <div class="review-list">
+          @for (item of r.detail; track $index; let i = $index) {
+            <article class="review-item" [class.correct]="item.isCorrect" [class.wrong]="!item.isCorrect">
+              <span class="review-icon">
+                <app-icon [name]="item.isCorrect ? 'check' : 'x'" [size]="16" />
+              </span>
+              <div>
+                <strong>{{ i + 1 }}. {{ item.text }}</strong>
+                @if (item.isCorrect) {
+                  <p class="answer-line correct-line">
+                    Respuesta correcta: {{ optionText(i, item.correctIndex) }}
+                  </p>
+                } @else {
+                  <p class="answer-line">
+                    Tu respuesta: {{ optionText(i, item.selectedIndex) }}
+                  </p>
+                  <p class="answer-line correct-line">
+                    Respuesta correcta: {{ optionText(i, item.correctIndex) }}
+                  </p>
+                }
+              </div>
+            </article>
           }
-        </fieldset>
-      }
-    </div>
+        </div>
+      </section>
+    } @else if (quiz(); as q) {
+      <nav class="breadcrumb fade-up" aria-label="Migas de pan">
+        <a routerLink="/home">Inicio</a>
+        <span>/</span>
+        <a [routerLink]="backLink()">{{ q.topic?.name ?? 'Módulo' }}</a>
+        <span>/</span>
+        <span>Cuestionario</span>
+      </nav>
 
-    <button
-      type="button"
-      class="button"
-      [disabled]="submitting() || !answered()"
-      (click)="submit()"
-    >
-      {{ submitting() ? 'Enviando...' : 'Enviar respuestas' }}
-    </button>
-  }
+      <header class="quiz-head fade-up">
+        <div>
+          <span class="eyebrow">Evaluación del módulo</span>
+          <h1>{{ q.title }}</h1>
+          <p>
+            Selecciona una respuesta por pregunta. Necesitas un
+            {{ q.passingScore }}% para aprobar.
+          </p>
+        </div>
+        <aside class="quiz-progress">
+          <div class="progress-line">
+            <span>{{ answeredCount() }} de {{ q.questions.length }} respondidas</span>
+            <strong>{{ progress() }}%</strong>
+          </div>
+          <div class="progress-bar">
+            <span [style.width.%]="progress()"></span>
+          </div>
+        </aside>
+      </header>
+
+      @if (error()) {
+        <div class="alert danger">
+          <app-icon name="alert" [size]="17" />
+          {{ error() }}
+        </div>
+      }
+
+      <div class="questions">
+        @for (question of q.questions; track $index; let qi = $index) {
+          <fieldset class="question fade-up">
+            <legend>
+              <span class="question-num">{{ qi + 1 }}</span>
+              <span>{{ question.text }}</span>
+            </legend>
+            <div class="options">
+              @for (option of question.options; track $index; let oi = $index) {
+                <label class="option" [class.selected]="answers()[qi] === oi">
+                  <input
+                    type="radio"
+                    [name]="'question-' + qi"
+                    [checked]="answers()[qi] === oi"
+                    (change)="select(qi, oi)"
+                  />
+                  <span class="radio-mark"></span>
+                  <span class="option-text">{{ option }}</span>
+                </label>
+              }
+            </div>
+          </fieldset>
+        }
+      </div>
+
+      <div class="quiz-actions">
+        <span class="hint">
+          <app-icon name="lock" [size]="15" />
+          Tus respuestas se envían de forma segura y quedan registradas en tus resultados.
+        </span>
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="submitting() || !answered()"
+          (click)="submit()"
+        >
+          @if (submitting()) {
+            <span class="spinner spinner-sm"></span>
+            Enviando...
+          } @else {
+            Enviar respuestas
+            <app-icon name="check" [size]="17" />
+          }
+        </button>
+      </div>
+    }
+  </div>
 </main>

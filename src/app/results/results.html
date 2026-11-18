@@ -1,0 +1,123 @@
+<app-header />
+
+<main class="page">
+  <div class="container">
+    <header class="page-head fade-up">
+      <div>
+        <span class="eyebrow">Tu actividad</span>
+        <h1>Mis resultados</h1>
+        <p>Consulta tus intentos, tu promedio y las evaluaciones que ya has superado.</p>
+      </div>
+      <a class="btn btn-primary" routerLink="/home">
+        Seguir aprendiendo
+        <app-icon name="arrow-right" [size]="17" />
+      </a>
+    </header>
+
+    @if (loading()) {
+      <div class="state">
+        <span class="spinner"></span>
+        Cargando resultados...
+      </div>
+    } @else if (error()) {
+      <div class="state error">
+        <app-icon name="alert" [size]="30" />
+        {{ error() }}
+        <button class="btn btn-ghost btn-sm" type="button" (click)="load()">Reintentar</button>
+      </div>
+    } @else {
+      <section class="stats-grid fade-up">
+        <article class="stat-card">
+          <span class="stat-icon"><app-icon name="list" [size]="20" /></span>
+          <div><strong>{{ summary().total }}</strong><span>Intentos totales</span></div>
+        </article>
+        <article class="stat-card success">
+          <span class="stat-icon"><app-icon name="check" [size]="20" /></span>
+          <div><strong>{{ summary().passed }}</strong><span>Cuestionarios aprobados</span></div>
+        </article>
+        <article class="stat-card cyan">
+          <span class="stat-icon"><app-icon name="chart" [size]="20" /></span>
+          <div><strong>{{ summary().average }}%</strong><span>Promedio general</span></div>
+        </article>
+        <article class="stat-card amber">
+          <span class="stat-icon"><app-icon name="award" [size]="20" /></span>
+          <div><strong>{{ summary().best }}%</strong><span>Mejor resultado</span></div>
+        </article>
+      </section>
+
+      @if (!attempts().length) {
+        <section class="empty panel">
+          <span class="empty-icon"><app-icon name="award" [size]="34" /></span>
+          <h2>Aún no tienes resultados</h2>
+          <p>
+            Completa tu primer cuestionario para ver tu puntuación, tus aciertos y
+            tu avance aquí.
+          </p>
+          <a class="btn btn-primary" routerLink="/home">Ir a los módulos</a>
+        </section>
+      } @else {
+        <section class="history fade-up">
+          <div class="block-head">
+            <div>
+              <h2>Historial de intentos</h2>
+              <p>Los intentos más recientes aparecen primero.</p>
+            </div>
+            <span class="badge">
+              {{ attempts().length }}
+              {{ attempts().length === 1 ? 'registro' : 'registros' }}
+            </span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Cuestionario</th>
+                  <th>Módulo</th>
+                  <th>Puntuación</th>
+                  <th>Resultado</th>
+                  <th>Fecha</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (attempt of attempts(); track attempt._id) {
+                  <tr>
+                    <td><strong>{{ quizTitle(attempt) }}</strong></td>
+                    <td>{{ topicName(attempt) }}</td>
+                    <td>
+                      <div class="score-cell">
+                        <span class="mini-bar">
+                          <span
+                            [style.width.%]="attempt.score"
+                            [class.failed]="!attempt.passed"
+                          ></span>
+                        </span>
+                        <strong>{{ attempt.score }}%</strong>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge" [class.badge-success]="attempt.passed" [class.badge-danger]="!attempt.passed">
+                        <app-icon [name]="attempt.passed ? 'check' : 'x'" [size]="12" />
+                        {{ attempt.passed ? 'Aprobado' : 'No aprobado' }}
+                      </span>
+                    </td>
+                    <td>{{ attempt.createdAt | date: 'dd/MM/yyyy · HH:mm' }}</td>
+                    <td>
+                      <div class="row-actions">
+                        @if (attempt.quiz?._id) {
+                          <a class="btn btn-ghost btn-sm" [routerLink]="quizLink(attempt)">Repetir</a>
+                        }
+                        <a class="btn btn-ghost btn-sm" [routerLink]="topicLink(attempt)">Ver módulo</a>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+    }
+  </div>
+</main>

@@ -2,21 +2,36 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../environments/environment';
 
+export interface QuizSummary {
+  _id: string;
+  title: string;
+  passingScore: number;
+}
+
 export interface TopicSummary {
   _id: string;
   name: string;
   slug: string;
   description: string;
+  imageUrl: string;
   order: number;
+  published: boolean;
   lessonCount: number;
   videoCount: number;
+  quiz: QuizSummary | null;
 }
 
 export interface LessonItem {
   _id: string;
   title: string;
+  introduction: string;
+  objectives: string[];
   content: string;
+  example: string;
+  recommendations: string[];
+  imageUrl: string;
   order: number;
+  published: boolean;
 }
 
 export interface VideoItem {
@@ -25,12 +40,8 @@ export interface VideoItem {
   url: string;
   description: string;
   order: number;
-}
-
-export interface QuizSummary {
-  _id: string;
-  title: string;
-  passingScore: number;
+  published: boolean;
+  lesson?: string | null;
 }
 
 export interface TopicDetailData {
@@ -40,11 +51,19 @@ export interface TopicDetailData {
   quiz: QuizSummary | null;
 }
 
-export interface LessonDetailData {
+export interface LessonSummary {
   _id: string;
   title: string;
-  content: string;
-  topic: { name: string; slug: string };
+  order: number;
+}
+
+export interface LessonDetailData extends LessonItem {
+  topic: { _id?: string; name: string; slug: string; description?: string };
+  video: VideoItem | null;
+  quiz: QuizSummary | null;
+  lessons: LessonSummary[];
+  previousLesson: LessonSummary | null;
+  nextLesson: LessonSummary | null;
 }
 
 export interface QuizQuestion {
@@ -56,6 +75,7 @@ export interface QuizData {
   _id: string;
   title: string;
   passingScore: number;
+  topic?: { name: string; slug: string };
   questions: QuizQuestion[];
 }
 
@@ -73,6 +93,29 @@ export interface QuizResult {
   total: number;
   passingScore: number;
   detail: QuizResultDetail[];
+}
+
+export interface AttemptItem {
+  _id: string;
+  username: string;
+  score: number;
+  passed: boolean;
+  correct: number;
+  total: number;
+  createdAt: string;
+  quiz: {
+    _id?: string;
+    title: string;
+    topic?: { name: string; slug: string } | null;
+  } | null;
+}
+
+export interface Progress {
+  topics: number;
+  lessons: number;
+  attempts: number;
+  passed: number;
+  average: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -96,10 +139,17 @@ export class ContentService {
     return this.http.get<QuizData>(`${this.base}/quizzes/${id}`);
   }
 
-  submitQuiz(id: string, answers: number[], username: string) {
+  submitQuiz(id: string, answers: number[]) {
     return this.http.post<QuizResult>(`${this.base}/quizzes/${id}/submit`, {
       answers,
-      username,
     });
+  }
+
+  getResults() {
+    return this.http.get<AttemptItem[]>(`${this.base}/results`);
+  }
+
+  getProgress() {
+    return this.http.get<Progress>(`${this.base}/progress`);
   }
 }

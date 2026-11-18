@@ -1,18 +1,173 @@
 <app-header />
 
-<main class="content">
-  @if (loading()) {
-    <p class="state">Cargando lección...</p>
-  } @else if (error()) {
-    <p class="state error">{{ error() }}</p>
-  } @else if (lesson(); as l) {
-    <a class="back" [routerLink]="['/topics', l.topic.slug]">← Volver al tema</a>
+<main class="page">
+  <div class="container">
+    @if (loading()) {
+      <div class="state">
+        <span class="spinner"></span>
+        Cargando lección...
+      </div>
+    } @else if (error()) {
+      <div class="state error">
+        <app-icon name="alert" [size]="30" />
+        {{ error() }}
+        <a class="btn btn-ghost btn-sm" routerLink="/home">Volver a los módulos</a>
+      </div>
+    } @else if (lesson(); as l) {
+      <nav class="breadcrumb fade-up" aria-label="Migas de pan">
+        <a routerLink="/home">Inicio</a>
+        <span>/</span>
+        <a [routerLink]="['/topics', l.topic.slug]">{{ l.topic.name }}</a>
+        <span>/</span>
+        <span>Lección {{ l.order }}</span>
+      </nav>
 
-    <article class="lesson">
-      <h1>{{ l.title }}</h1>
-      @for (paragraph of paragraphs(l.content); track $index) {
-        <p>{{ paragraph }}</p>
-      }
-    </article>
-  }
+      <div class="lesson-layout">
+        <article class="lesson-main">
+          <header class="lesson-hero fade-up">
+            <span class="module-mark">
+              <app-icon [name]="moduleIcon(l.topic.slug)" [size]="20" />
+              {{ l.topic.name }}
+            </span>
+            <h1>{{ l.title }}</h1>
+            <p class="intro">{{ l.introduction }}</p>
+            <div class="progress-row">
+              <span>Lección {{ l.order }} de {{ l.lessons.length }}</span>
+              <span>{{ progressPercent(l) }}%</span>
+            </div>
+            <div class="progress-bar">
+              <span [style.width.%]="progressPercent(l)"></span>
+            </div>
+          </header>
+
+          @if (l.objectives?.length) {
+            <section class="block">
+              <div class="block-head">
+                <h2><app-icon name="target" [size]="19" /> Objetivos de aprendizaje</h2>
+              </div>
+              <ul class="objective-grid">
+                @for (objective of l.objectives; track $index) {
+                  <li>
+                    <span class="check"><app-icon name="check" [size]="14" /></span>
+                    {{ objective }}
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <section class="block">
+            <div class="block-head">
+              <h2><app-icon name="book" [size]="19" /> Contenido</h2>
+            </div>
+            <div class="prose">
+              @for (paragraph of paragraphs(l.content); track $index) {
+                <p>{{ paragraph }}</p>
+              }
+            </div>
+          </section>
+
+          @if (l.example) {
+            <section class="callout">
+              <span class="callout-icon"><app-icon name="spark" [size]="20" /></span>
+              <div>
+                <strong>Ejemplo práctico</strong>
+                <p>{{ l.example }}</p>
+              </div>
+            </section>
+          }
+
+          @if (l.recommendations?.length) {
+            <section class="block">
+              <div class="block-head">
+                <h2><app-icon name="shield" [size]="19" /> Recomendaciones</h2>
+              </div>
+              <ul class="recommendations">
+                @for (recommendation of l.recommendations; track $index) {
+                  <li>
+                    <span class="check"><app-icon name="check" [size]="14" /></span>
+                    <span>{{ recommendation }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <nav class="lesson-nav" aria-label="Navegación entre lecciones">
+            @if (l.previousLesson) {
+              <a class="nav-link" [routerLink]="['/lessons', l.previousLesson._id]">
+                <app-icon name="arrow-left" [size]="18" />
+                <span><small>Lección anterior</small>{{ l.previousLesson.title }}</span>
+              </a>
+            } @else {
+              <span></span>
+            }
+
+            @if (l.nextLesson) {
+              <a class="nav-link next" [routerLink]="['/lessons', l.nextLesson._id]">
+                <span><small>Lección siguiente</small>{{ l.nextLesson.title }}</span>
+                <app-icon name="arrow-right" [size]="18" />
+              </a>
+            }
+          </nav>
+        </article>
+
+        <aside class="lesson-side">
+          @if (l.video) {
+            <section class="panel side-panel">
+              <div class="side-head">
+                <h2>Video de la lección</h2>
+                <app-icon name="play" [size]="18" />
+              </div>
+              @if (l.video.url) {
+                <div class="video-frame">
+                  <iframe
+                    [src]="l.video.url | safeUrl"
+                    [title]="l.video.title"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen
+                    loading="lazy"
+                  ></iframe>
+                </div>
+              } @else {
+                <p class="pending">Video pendiente de configurar.</p>
+              }
+              <h3>{{ l.video.title }}</h3>
+              <p>{{ l.video.description }}</p>
+            </section>
+          }
+
+          @if (l.quiz; as quiz) {
+            <section class="panel quiz-cta">
+              <span class="quiz-icon"><app-icon name="clipboard" [size]="22" /></span>
+              <h2>Cuestionario del módulo</h2>
+              <p>Responde y comprueba tu resultado. Nota mínima: {{ quiz.passingScore }}%.</p>
+              <a class="btn btn-primary btn-block" [routerLink]="['/quizzes', quiz._id]">
+                Comenzar
+                <app-icon name="arrow-right" [size]="16" />
+              </a>
+            </section>
+          }
+
+          <section class="panel index-panel">
+            <div class="side-head">
+              <h2>En este módulo</h2>
+              <span class="badge">{{ l.lessons.length }}</span>
+            </div>
+            <ol class="lesson-index">
+              @for (item of l.lessons; track item._id) {
+                <li [class.current]="item._id === l._id">
+                  <a [routerLink]="['/lessons', item._id]">
+                    <span class="index-num">{{ item.order }}</span>
+                    <span>{{ item.title }}</span>
+                  </a>
+                </li>
+              }
+            </ol>
+          </section>
+        </aside>
+      </div>
+    }
+  </div>
 </main>
