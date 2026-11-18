@@ -2,6 +2,24 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../environments/environment';
 
+export interface ImageMetadata {
+  id: string;
+  title: string;
+  url: string;
+  thumbnailUrl: string;
+  width: number;
+  height: number;
+  creator: string;
+  creatorUrl: string;
+  license: string;
+  licenseVersion: string;
+  licenseUrl: string;
+  source: string;
+  foreignLandingUrl: string;
+  attribution: string;
+  query: string;
+}
+
 export interface QuizSummary {
   _id: string;
   title: string;
@@ -14,6 +32,7 @@ export interface TopicSummary {
   slug: string;
   description: string;
   imageUrl: string;
+  image?: ImageMetadata | null;
   order: number;
   published: boolean;
   lessonCount: number;
@@ -30,6 +49,7 @@ export interface LessonItem {
   example: string;
   recommendations: string[];
   imageUrl: string;
+  image?: ImageMetadata | null;
   order: number;
   published: boolean;
 }
@@ -67,22 +87,30 @@ export interface LessonDetailData extends LessonItem {
 }
 
 export interface QuizQuestion {
+  key: string;
   text: string;
   options: string[];
 }
 
-export interface QuizData {
-  _id: string;
+export interface QuizAttempt {
+  attemptId: string;
   title: string;
   passingScore: number;
-  topic?: { name: string; slug: string };
+  topic?: { name: string; slug: string } | null;
   questions: QuizQuestion[];
+}
+
+export interface QuizAnswer {
+  questionKey: string;
+  selectedIndex: number;
 }
 
 export interface QuizResultDetail {
   text: string;
+  options: string[];
   correctIndex: number;
   selectedIndex: number;
+  explanation: string;
   isCorrect: boolean;
 }
 
@@ -135,14 +163,15 @@ export class ContentService {
     return this.http.get<LessonDetailData>(`${this.base}/lessons/${id}`);
   }
 
-  getQuiz(id: string) {
-    return this.http.get<QuizData>(`${this.base}/quizzes/${id}`);
+  startQuiz(id: string) {
+    return this.http.post<QuizAttempt>(`${this.base}/quizzes/${id}/attempts`, {});
   }
 
-  submitQuiz(id: string, answers: number[]) {
-    return this.http.post<QuizResult>(`${this.base}/quizzes/${id}/submit`, {
-      answers,
-    });
+  submitAttempt(attemptId: string, answers: QuizAnswer[]) {
+    return this.http.post<QuizResult>(
+      `${this.base}/attempts/${attemptId}/submit`,
+      { answers },
+    );
   }
 
   getResults() {

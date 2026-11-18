@@ -384,6 +384,10 @@
   line-height: 1.5;
 }
 
+.review-item > div {
+  min-width: 0;
+}
+
 .answer-line {
   margin-top: 6px;
   color: var(--muted);
@@ -393,6 +397,25 @@
 
 .correct-line {
   color: #a7f3d0;
+}
+
+.explanation {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 9px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(34, 211, 238, 0.16);
+  background: rgba(34, 211, 238, 0.06);
+  color: #c9f6ff;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.explanation app-icon {
+  color: var(--cyan);
+  margin-top: 1px;
 }
 
 @media (max-width: 760px) {

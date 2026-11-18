@@ -31,6 +31,39 @@
   min-width: 0;
 }
 
+.lesson-cover {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(7, 14, 28, 0.8);
+  box-shadow: var(--shadow);
+}
+
+.lesson-cover img {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  display: block;
+  object-fit: cover;
+}
+
+.lesson-cover figcaption {
+  padding: 8px 14px;
+  color: var(--faint);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  background: rgba(8, 15, 29, 0.86);
+}
+
+.lesson-cover figcaption a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.lesson-cover figcaption a:hover {
+  color: var(--cyan);
+}
+
 .lesson-hero {
   position: relative;
   overflow: hidden;
@@ -446,6 +479,10 @@
 }
 
 @media (max-width: 700px) {
+  .lesson-cover img {
+    aspect-ratio: 16 / 9;
+  }
+
   .lesson-hero {
     padding: 24px;
   }

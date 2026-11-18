@@ -121,6 +121,9 @@
                   <button class="btn btn-ghost btn-sm" type="button" (click)="newQuiz()">
                     <app-icon name="plus" [size]="15" /> Nuevo cuestionario
                   </button>
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="newUser()">
+                    <app-icon name="plus" [size]="15" /> Nuevo usuario
+                  </button>
                 </div>
               </div>
 
@@ -203,9 +206,20 @@
                   <h2>Módulos</h2>
                   <p>Crea y organiza los bloques temáticos del curso.</p>
                 </div>
-                <button class="btn btn-primary" type="button" (click)="newTopic()">
-                  <app-icon name="plus" [size]="16" /> Nuevo módulo
-                </button>
+                <div class="toolbar-actions">
+                  <button
+                    class="btn btn-ghost"
+                    type="button"
+                    [disabled]="checkingImages()"
+                    (click)="checkImages()"
+                  >
+                    <app-icon name="eye" [size]="16" />
+                    {{ checkingImages() ? 'Verificando...' : 'Verificar imágenes' }}
+                  </button>
+                  <button class="btn btn-primary" type="button" (click)="newTopic()">
+                    <app-icon name="plus" [size]="16" /> Nuevo módulo
+                  </button>
+                </div>
               </div>
 
               @if (formKind() === 'topics') {
@@ -241,10 +255,50 @@
                       <span>Descripción</span>
                       <textarea class="textarea" name="topicDescription" [(ngModel)]="topicForm.description" placeholder="Resumen breve del módulo"></textarea>
                     </label>
-                    <label class="field span-2">
-                      <span>URL de imagen (opcional)</span>
-                      <input class="input" name="topicImage" [(ngModel)]="topicForm.imageUrl" placeholder="https://... (ilustración pendiente)" />
-                    </label>
+                    <div class="image-editor span-2">
+                      <div class="image-preview">
+                        @if (topicForm.imageUrl || editingImage()?.thumbnailUrl) {
+                          <img
+                            [src]="topicForm.imageUrl || editingImage()?.thumbnailUrl"
+                            alt="Vista previa del módulo"
+                            onerror="this.style.display='none'"
+                          />
+                        } @else {
+                          <span class="image-placeholder">
+                            <app-icon name="book" [size]="24" />
+                            Sin imagen asignada
+                          </span>
+                        }
+                      </div>
+                      <div class="image-fields">
+                        <strong class="image-title">Imagen del módulo</strong>
+                        <label class="field">
+                          <span>URL de imagen (opcional)</span>
+                          <input class="input" name="topicImage" [(ngModel)]="topicForm.imageUrl" placeholder="Se asigna automáticamente con Openverse" />
+                        </label>
+                        <label class="field">
+                          <span>Búsqueda en Openverse (opcional, inglés)</span>
+                          <input class="input" name="topicImageQuery" [(ngModel)]="topicForm.imageQuery" placeholder="Ej. password security" />
+                        </label>
+                        <div class="image-actions">
+                          <button
+                            class="btn btn-ghost btn-sm"
+                            type="button"
+                            [disabled]="!editingId() || saving()"
+                            (click)="regenerateTopicImage()"
+                          >
+                            <app-icon name="spark" [size]="15" />
+                            Regenerar imagen
+                          </button>
+                          <span class="hint">
+                            {{ editingId() ? 'Usa una búsqueda más simple si no encuentra resultados.' : 'La imagen se asigna automáticamente al crear el módulo.' }}
+                          </span>
+                        </div>
+                        @if (editingImage()?.attribution) {
+                          <p class="hint">{{ editingImage()?.attribution }}</p>
+                        }
+                      </div>
+                    </div>
                   </div>
 
                   <div class="editor-actions">
@@ -273,8 +327,25 @@
                         <tr>
                           <td>{{ topic.order }}</td>
                           <td>
-                            <strong>{{ topic.name }}</strong>
-                            <span class="sub">{{ topic.slug }}</span>
+                            <div class="name-cell">
+                              @if (topic.image?.thumbnailUrl || topic.imageUrl) {
+                                <img
+                                  class="thumb"
+                                  [src]="topic.image?.thumbnailUrl || topic.imageUrl"
+                                  [alt]="topic.name"
+                                  loading="lazy"
+                                  onerror="this.style.display='none'"
+                                />
+                              } @else {
+                                <span class="thumb placeholder">
+                                  <app-icon name="book" [size]="16" />
+                                </span>
+                              }
+                              <div class="name-meta">
+                                <strong>{{ topic.name }}</strong>
+                                <span class="sub">{{ topic.slug }}</span>
+                              </div>
+                            </div>
                           </td>
                           <td>
                             <span class="mini-meta">
@@ -388,10 +459,50 @@
                       <span>Ejemplo</span>
                       <textarea class="textarea" name="lessonExample" [(ngModel)]="lessonForm.example" placeholder="Ejemplo práctico o caso real"></textarea>
                     </label>
-                    <label class="field span-2">
-                      <span>URL de imagen (opcional)</span>
-                      <input class="input" name="lessonImage" [(ngModel)]="lessonForm.imageUrl" placeholder="https://... (ilustración pendiente)" />
-                    </label>
+                    <div class="image-editor span-2">
+                      <div class="image-preview">
+                        @if (lessonForm.imageUrl || editingImage()?.thumbnailUrl) {
+                          <img
+                            [src]="lessonForm.imageUrl || editingImage()?.thumbnailUrl"
+                            alt="Vista previa de la lección"
+                            onerror="this.style.display='none'"
+                          />
+                        } @else {
+                          <span class="image-placeholder">
+                            <app-icon name="book" [size]="24" />
+                            Sin imagen asignada
+                          </span>
+                        }
+                      </div>
+                      <div class="image-fields">
+                        <strong class="image-title">Imagen de la lección</strong>
+                        <label class="field">
+                          <span>URL de imagen (opcional)</span>
+                          <input class="input" name="lessonImage" [(ngModel)]="lessonForm.imageUrl" placeholder="Se asigna automáticamente con Openverse" />
+                        </label>
+                        <label class="field">
+                          <span>Búsqueda en Openverse (opcional, inglés)</span>
+                          <input class="input" name="lessonImageQuery" [(ngModel)]="lessonForm.imageQuery" placeholder="Ej. password security" />
+                        </label>
+                        <div class="image-actions">
+                          <button
+                            class="btn btn-ghost btn-sm"
+                            type="button"
+                            [disabled]="!editingId() || saving()"
+                            (click)="regenerateLessonImage()"
+                          >
+                            <app-icon name="spark" [size]="15" />
+                            Regenerar imagen
+                          </button>
+                          <span class="hint">
+                            {{ editingId() ? 'Si no hay resultados, prueba una búsqueda más general.' : 'La imagen se asigna automáticamente al crear la lección.' }}
+                          </span>
+                        </div>
+                        @if (editingImage()?.attribution) {
+                          <p class="hint">{{ editingImage()?.attribution }}</p>
+                        }
+                      </div>
+                    </div>
                     <label class="check-field span-2">
                       <input type="checkbox" name="lessonPublished" [(ngModel)]="lessonForm.published" />
                       <span>Publicada para estudiantes</span>
@@ -423,7 +534,26 @@
                       @for (lesson of filteredLessons(); track lesson._id) {
                         <tr>
                           <td>{{ topicNameOf(lesson.topic) }}</td>
-                          <td><strong>{{ lesson.title }}</strong></td>
+                          <td>
+                            <div class="name-cell">
+                              @if (lesson.image?.thumbnailUrl || lesson.imageUrl) {
+                                <img
+                                  class="thumb"
+                                  [src]="lesson.image?.thumbnailUrl || lesson.imageUrl"
+                                  [alt]="lesson.title"
+                                  loading="lazy"
+                                  onerror="this.style.display='none'"
+                                />
+                              } @else {
+                                <span class="thumb placeholder">
+                                  <app-icon name="book" [size]="16" />
+                                </span>
+                              }
+                              <div class="name-meta">
+                                <strong>{{ lesson.title }}</strong>
+                              </div>
+                            </div>
+                          </td>
                           <td>{{ lesson.order }}</td>
                           <td>
                             <span class="badge" [class.badge-success]="lesson.published" [class.badge-warning]="!lesson.published">
@@ -617,13 +747,19 @@
                   <div class="editor-head">
                     <div>
                       <h3>{{ formTitle() }}</h3>
-                      <p>Marca el círculo de la opción correcta en cada pregunta.</p>
+                      <p>Cuatro opciones por pregunta, una explicación y mínimo 20 preguntas para publicar.</p>
                     </div>
                     <button class="btn btn-ghost btn-sm" type="button" (click)="closeForm()">
                       <app-icon name="x" [size]="15" /> Cerrar
                     </button>
                   </div>
 
+                  @if (loadingQuiz()) {
+                    <div class="state">
+                      <span class="spinner"></span>
+                      Cargando preguntas del cuestionario...
+                    </div>
+                  } @else {
                   <div class="form-grid">
                     <label class="field">
                       <span>Módulo *</span>
@@ -655,6 +791,9 @@
                       <input type="checkbox" name="quizPublished" [(ngModel)]="quizForm.published" />
                       <span>Publicado para estudiantes</span>
                     </label>
+                    <p class="hint span-2">
+                      Publica solo cuando el cuestionario tenga al menos 20 preguntas.
+                    </p>
                   </div>
 
                   <div class="questions-editor">
@@ -680,6 +819,11 @@
                           <input class="input" [name]="'quiz-q-' + qi" [(ngModel)]="question.text" placeholder="Escribe la pregunta" />
                         </label>
 
+                        <label class="field">
+                          <span>Explicación *</span>
+                          <textarea class="textarea" [name]="'quiz-explanation-' + qi" [(ngModel)]="question.explanation" placeholder="Explica por qué la respuesta correcta es la correcta"></textarea>
+                        </label>
+
                         <div class="options-editor">
                           @for (option of question.options; track $index; let oi = $index) {
                             <div class="option-editor" [class.correct]="question.correctIndex === oi">
@@ -696,18 +840,14 @@
                                 [(ngModel)]="question.options[oi]"
                                 [placeholder]="'Opción ' + (oi + 1)"
                               />
-                              <button class="btn btn-ghost btn-icon" type="button" title="Quitar opción" [disabled]="question.options.length <= 2" (click)="removeOption(qi, oi)">
-                                <app-icon name="x" [size]="14" />
-                              </button>
                             </div>
                           }
                         </div>
 
                         <div class="question-editor-foot">
-                          <button class="btn btn-ghost btn-sm" type="button" (click)="addOption(qi)">
-                            <app-icon name="plus" [size]="14" /> Añadir opción
-                          </button>
-                          <span class="hint">Marca el círculo de la respuesta correcta.</span>
+                          <span class="hint">
+                            Cuatro opciones obligatorias. Marca el círculo de la respuesta correcta.
+                          </span>
                         </div>
                       </article>
                     }
@@ -718,11 +858,12 @@
                   </button>
 
                   <div class="editor-actions">
-                    <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="saveQuiz()">
+                    <button class="btn btn-primary" type="button" [disabled]="saving() || loadingQuiz()" (click)="saveQuiz()">
                       {{ saving() ? 'Guardando...' : 'Guardar cuestionario' }}
                     </button>
                     <button class="btn btn-ghost" type="button" (click)="closeForm()">Cancelar</button>
                   </div>
+                  }
                 </section>
               }
 
@@ -786,10 +927,84 @@
               <div class="section-toolbar">
                 <div>
                   <h2>Usuarios y roles</h2>
-                  <p>Asigna permisos de administrador o estudiante a las cuentas existentes.</p>
+                  <p>Crea cuentas y asigna permisos de administrador o estudiante.</p>
                 </div>
-                <span class="badge">{{ users().length }} cuentas</span>
+                <div class="toolbar-actions">
+                  <span class="badge">{{ users().length }} cuentas</span>
+                  <button class="btn btn-primary" type="button" (click)="newUser()">
+                    <app-icon name="plus" [size]="16" /> Nuevo usuario
+                  </button>
+                </div>
               </div>
+
+              <section class="editor panel" id="user-form">
+                <div class="editor-head">
+                  <div>
+                    <h3>Crear usuario</h3>
+                    <p>
+                      Mínimo 8 caracteres, con al menos una letra y un número. No se
+                      muestra ni se devuelve la contraseña.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="form-grid">
+                  <label class="field">
+                    <span>Usuario *</span>
+                    <input
+                      class="input"
+                      name="newUsername"
+                      [(ngModel)]="userForm.username"
+                      placeholder="Ej. ana.lopez"
+                      autocomplete="off"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Rol *</span>
+                    <select class="select" name="newUserRole" [(ngModel)]="userForm.role">
+                      <option value="student">Estudiante</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Contraseña *</span>
+                    <div class="password-field">
+                      <input
+                        class="input"
+                        name="newPassword"
+                        [type]="showUserPassword() ? 'text' : 'password'"
+                        [(ngModel)]="userForm.password"
+                        autocomplete="new-password"
+                      />
+                      <button
+                        class="btn btn-ghost btn-icon"
+                        type="button"
+                        [title]="showUserPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                        (click)="showUserPassword.set(!showUserPassword())"
+                      >
+                        <app-icon [name]="showUserPassword() ? 'eye-off' : 'eye'" [size]="16" />
+                      </button>
+                    </div>
+                  </label>
+                  <label class="field">
+                    <span>Confirmar contraseña *</span>
+                    <input
+                      class="input"
+                      name="newPasswordConfirm"
+                      [type]="showUserPassword() ? 'text' : 'password'"
+                      [(ngModel)]="userForm.confirmPassword"
+                      autocomplete="new-password"
+                    />
+                  </label>
+                </div>
+
+                <div class="editor-actions">
+                  <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="saveUser()">
+                    <app-icon name="plus" [size]="16" />
+                    {{ saving() ? 'Creando...' : 'Crear usuario' }}
+                  </button>
+                </div>
+              </section>
 
               <div class="table-wrap">
                 <table class="data-table">

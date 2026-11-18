@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../environments/environment';
+import type { ImageMetadata } from './content';
 
 export interface AdminTopic {
   _id: string;
@@ -8,6 +9,8 @@ export interface AdminTopic {
   slug: string;
   description: string;
   imageUrl: string;
+  image?: ImageMetadata | null;
+  imageQuery?: string;
   order: number;
   published: boolean;
   lessonCount?: number;
@@ -25,6 +28,8 @@ export interface AdminLesson {
   example: string;
   recommendations: string[];
   imageUrl: string;
+  image?: ImageMetadata | null;
+  imageQuery?: string;
   order: number;
   published: boolean;
 }
@@ -44,6 +49,7 @@ export interface AdminQuestion {
   text: string;
   options: string[];
   correctIndex: number;
+  explanation: string;
 }
 
 export interface AdminQuiz {
@@ -52,7 +58,8 @@ export interface AdminQuiz {
   lesson: { _id: string; title: string; order: number } | string | null;
   title: string;
   passingScore: number;
-  questions: AdminQuestion[];
+  questions?: AdminQuestion[];
+  questionCount?: number;
   published: boolean;
 }
 
@@ -72,6 +79,26 @@ export interface AdminAttempt {
   total: number;
   createdAt: string;
   quiz: { title: string; topic?: { name: string } | null } | null;
+}
+
+export interface AdminUserPayload {
+  username: string;
+  password: string;
+  role: 'admin' | 'student';
+}
+
+export interface ImageAssignmentResponse {
+  image: ImageMetadata | null;
+  imageUrl: string;
+}
+
+export interface ImageCheckSummary {
+  checked: number;
+  available: number;
+  repaired: number;
+  failed: number;
+  skipped?: boolean;
+  reason?: string;
 }
 
 export interface AdminStats {
@@ -111,6 +138,16 @@ export class AdminService {
     return this.http.delete<{ message: string }>(`${this.base}/topics/${id}`);
   }
 
+  assignTopicImage(id: string, query?: string) {
+    return this.http.post<ImageAssignmentResponse>(`${this.base}/topics/${id}/image`, {
+      query: query ?? '',
+    });
+  }
+
+  checkImages() {
+    return this.http.post<ImageCheckSummary>(`${this.base}/images/check`, {});
+  }
+
   lessons(topicId?: string) {
     const query = topicId ? `?topic=${topicId}` : '';
     return this.http.get<AdminLesson[]>(`${this.base}/lessons${query}`);
@@ -126,6 +163,13 @@ export class AdminService {
 
   deleteLesson(id: string) {
     return this.http.delete<{ message: string }>(`${this.base}/lessons/${id}`);
+  }
+
+  assignLessonImage(id: string, query?: string) {
+    return this.http.post<ImageAssignmentResponse>(
+      `${this.base}/lessons/${id}/image`,
+      { query: query ?? '' },
+    );
   }
 
   videos(topicId?: string) {
@@ -150,6 +194,10 @@ export class AdminService {
     return this.http.get<AdminQuiz[]>(`${this.base}/quizzes${query}`);
   }
 
+  quiz(id: string) {
+    return this.http.get<AdminQuiz>(`${this.base}/quizzes/${id}`);
+  }
+
   createQuiz(payload: Partial<AdminQuiz>) {
     return this.http.post<AdminQuiz>(`${this.base}/quizzes`, payload);
   }
@@ -158,12 +206,23 @@ export class AdminService {
     return this.http.put<AdminQuiz>(`${this.base}/quizzes/${id}`, payload);
   }
 
+  setQuizPublished(id: string, published: boolean) {
+    return this.http.patch<{ _id: string; published: boolean }>(
+      `${this.base}/quizzes/${id}/published`,
+      { published },
+    );
+  }
+
   deleteQuiz(id: string) {
     return this.http.delete<{ message: string }>(`${this.base}/quizzes/${id}`);
   }
 
   users() {
     return this.http.get<AdminUser[]>(`${this.base}/users`);
+  }
+
+  createUser(payload: AdminUserPayload) {
+    return this.http.post<AdminUser>(`${this.base}/users`, payload);
   }
 
   updateUserRole(id: string, role: 'admin' | 'student') {

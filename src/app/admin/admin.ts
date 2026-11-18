@@ -15,6 +15,7 @@ import {
   AdminVideo,
 } from '../admin.service';
 import { Auth } from '../auth';
+import type { ImageMetadata } from '../content';
 import { Icon } from '../shared/icon/icon';
 
 type AdminTab =
@@ -33,6 +34,7 @@ interface TopicForm {
   slug: string;
   description: string;
   imageUrl: string;
+  imageQuery: string;
   order: number;
   published: boolean;
 }
@@ -46,6 +48,7 @@ interface LessonForm {
   example: string;
   recommendationsText: string;
   imageUrl: string;
+  imageQuery: string;
   order: number;
   published: boolean;
 }
@@ -67,6 +70,13 @@ interface QuizForm {
   passingScore: number;
   questions: AdminQuestion[];
   published: boolean;
+}
+
+interface UserForm {
+  username: string;
+  password: string;
+  confirmPassword: string;
+  role: 'admin' | 'student';
 }
 
 @Component({
@@ -102,11 +112,16 @@ export class Admin {
 
   protected readonly formKind = signal<FormKind | null>(null);
   protected readonly editingId = signal<string | null>(null);
+  protected readonly editingImage = signal<ImageMetadata | null>(null);
+  protected readonly loadingQuiz = signal(false);
+  protected readonly checkingImages = signal(false);
+  protected readonly showUserPassword = signal(false);
 
   protected topicForm: TopicForm = this.emptyTopic();
   protected lessonForm: LessonForm = this.emptyLesson();
   protected videoForm: VideoForm = this.emptyVideo();
   protected quizForm: QuizForm = this.emptyQuiz();
+  protected userForm: UserForm = this.emptyUser();
 
   protected readonly navItems: { tab: AdminTab; label: string; icon: string }[] = [
     { tab: 'dashboard', label: 'Resumen', icon: 'chart' },
@@ -284,6 +299,8 @@ export class Admin {
   protected closeForm(): void {
     this.formKind.set(null);
     this.editingId.set(null);
+    this.editingImage.set(null);
+    this.loadingQuiz.set(false);
   }
 
   private scrollToForm(): void {
@@ -300,6 +317,7 @@ export class Admin {
       slug: '',
       description: '',
       imageUrl: '',
+      imageQuery: '',
       order: 1,
       published: true,
     };
@@ -315,6 +333,7 @@ export class Admin {
       example: '',
       recommendationsText: '',
       imageUrl: '',
+      imageQuery: '',
       order: 1,
       published: true,
     };
@@ -339,12 +358,26 @@ export class Admin {
       title: '',
       passingScore: 70,
       questions: [this.newQuestion()],
-      published: true,
+      published: false,
+    };
+  }
+
+  private emptyUser(): UserForm {
+    return {
+      username: '',
+      password: '',
+      confirmPassword: '',
+      role: 'student',
     };
   }
 
   private newQuestion(): AdminQuestion {
-    return { text: '', options: ['', '', '', ''], correctIndex: 0 };
+    return {
+      text: '',
+      options: ['', '', '', ''],
+      correctIndex: 0,
+      explanation: '',
+    };
   }
 
   private splitLines(value: string): string[] {
@@ -403,7 +436,7 @@ export class Admin {
   }
 
   protected questionCount(quiz: AdminQuiz): number {
-    return quiz.questions?.length ?? 0;
+    return quiz.questionCount ?? quiz.questions?.length ?? 0;
   }
 
   protected roleLabel(role: 'admin' | 'student'): string {
@@ -433,12 +466,14 @@ export class Admin {
   protected openTopicForm(topic?: AdminTopic): void {
     this.clearMessages();
     this.editingId.set(topic?._id ?? null);
+    this.editingImage.set(topic?.image ?? null);
     this.topicForm = topic
       ? {
           name: topic.name,
           slug: topic.slug,
           description: topic.description,
           imageUrl: topic.imageUrl,
+          imageQuery: topic.image?.query ?? '',
           order: topic.order,
           published: topic.published,
         }
@@ -450,6 +485,7 @@ export class Admin {
   protected openLessonForm(lesson?: AdminLesson): void {
     this.clearMessages();
     this.editingId.set(lesson?._id ?? null);
+    this.editingImage.set(lesson?.image ?? null);
     this.lessonForm = lesson
       ? {
           topic: this.topicIdOf(lesson.topic),
@@ -460,6 +496,7 @@ export class Admin {
           example: lesson.example,
           recommendationsText: (lesson.recommendations ?? []).join('\n'),
           imageUrl: lesson.imageUrl,
+          imageQuery: lesson.image?.query ?? '',
           order: lesson.order,
           published: lesson.published,
         }
@@ -497,25 +534,65 @@ export class Admin {
   protected openQuizForm(quiz?: AdminQuiz): void {
     this.clearMessages();
     this.editingId.set(quiz?._id ?? null);
-    this.quizForm = quiz
-      ? {
-          topic: this.topicIdOf(quiz.topic),
-          lesson: this.lessonIdOf(quiz.lesson),
-          title: quiz.title,
-          passingScore: quiz.passingScore,
-          questions: quiz.questions.map((question) => ({
-            text: question.text,
-            options: [...question.options],
-            correctIndex: question.correctIndex,
-          })),
-          published: quiz.published,
-        }
-      : {
-          ...this.emptyQuiz(),
-          topic: this.quizFilter() || this.topics()[0]?._id || '',
-        };
+    this.loadingQuiz.set(false);
     this.formKind.set('quizzes');
+
+    if (!quiz) {
+      this.quizForm = {
+        ...this.emptyQuiz(),
+        topic: this.quizFilter() || this.topics()[0]?._id || '',
+      };
+      this.scrollToForm();
+      return;
+    }
+
+    this.quizForm = {
+      topic: this.topicIdOf(quiz.topic),
+      lesson: this.lessonIdOf(quiz.lesson),
+      title: quiz.title,
+      passingScore: quiz.passingScore,
+      questions: [],
+      published: quiz.published,
+    };
+    this.loadingQuiz.set(true);
     this.scrollToForm();
+
+    this.admin.quiz(quiz._id).subscribe({
+      next: (detail) => {
+        this.fillQuizForm(detail);
+        this.loadingQuiz.set(false);
+      },
+      error: (err) => {
+        this.loadingQuiz.set(false);
+        this.error.set(
+          err?.error?.message ?? 'No se pudo cargar el cuestionario completo.',
+        );
+        this.closeForm();
+      },
+    });
+  }
+
+  private fillQuizForm(quiz: AdminQuiz): void {
+    const questions = quiz.questions?.length
+      ? quiz.questions
+      : [this.newQuestion()];
+
+    this.quizForm = {
+      topic: this.topicIdOf(quiz.topic),
+      lesson: this.lessonIdOf(quiz.lesson),
+      title: quiz.title,
+      passingScore: quiz.passingScore,
+      questions: questions.map((question) => ({
+        text: question.text,
+        options: [0, 1, 2, 3].map((index) => question.options?.[index] ?? ''),
+        correctIndex: Math.max(
+          0,
+          Math.min(3, Number(question.correctIndex) || 0),
+        ),
+        explanation: question.explanation ?? '',
+      })),
+      published: quiz.published,
+    };
   }
 
   protected setVideoTopic(topicId: string): void {
@@ -560,27 +637,6 @@ export class Admin {
     };
   }
 
-  protected addOption(questionIndex: number): void {
-    const question = this.quizForm.questions[questionIndex];
-    question.options = [...question.options, ''];
-  }
-
-  protected removeOption(questionIndex: number, optionIndex: number): void {
-    const question = this.quizForm.questions[questionIndex];
-
-    if (question.options.length <= 2) {
-      return;
-    }
-
-    question.options = question.options.filter((_, position) => position !== optionIndex);
-
-    if (question.correctIndex === optionIndex) {
-      question.correctIndex = 0;
-    } else if (question.correctIndex > optionIndex) {
-      question.correctIndex -= 1;
-    }
-  }
-
   protected setCorrect(questionIndex: number, optionIndex: number): void {
     this.quizForm.questions[questionIndex].correctIndex = optionIndex;
   }
@@ -603,7 +659,11 @@ export class Admin {
     request.subscribe({
       next: () => {
         this.saving.set(false);
-        this.message.set(id ? 'Módulo actualizado.' : 'Módulo creado.');
+        this.message.set(
+          id
+            ? 'Módulo actualizado.'
+            : 'Módulo creado. La imagen se asigna automáticamente en segundo plano.',
+        );
         this.closeForm();
         this.loadAll(true);
       },
@@ -638,6 +698,7 @@ export class Admin {
       example: this.lessonForm.example,
       recommendations: this.splitLines(this.lessonForm.recommendationsText),
       imageUrl: this.lessonForm.imageUrl,
+      imageQuery: this.lessonForm.imageQuery,
       order: this.lessonForm.order,
       published: this.lessonForm.published,
     };
@@ -648,7 +709,11 @@ export class Admin {
     request.subscribe({
       next: () => {
         this.saving.set(false);
-        this.message.set(id ? 'Lección actualizada.' : 'Lección creada.');
+        this.message.set(
+          id
+            ? 'Lección actualizada.'
+            : 'Lección creada. La imagen se asigna automáticamente en segundo plano.',
+        );
         this.closeForm();
         this.loadAll(true);
       },
@@ -708,21 +773,28 @@ export class Admin {
 
   private normalizedQuestions(): AdminQuestion[] {
     return this.quizForm.questions.map((question) => {
-      const rawOptions = question.options ?? [];
-      const options = rawOptions.map((option) => (option ?? '').trim()).filter(Boolean);
-      const correctText = (rawOptions[question.correctIndex] ?? '').trim();
-      let correctIndex = options.indexOf(correctText);
+      const options = [0, 1, 2, 3].map((index) =>
+        (question.options?.[index] ?? '').trim(),
+      );
 
-      if (correctIndex < 0) {
-        correctIndex = 0;
-      }
-
-      return { text: (question.text ?? '').trim(), options, correctIndex };
+      return {
+        text: (question.text ?? '').trim(),
+        options,
+        correctIndex: Math.max(
+          0,
+          Math.min(3, Number(question.correctIndex) || 0),
+        ),
+        explanation: (question.explanation ?? '').trim(),
+      };
     });
   }
 
   protected saveQuiz(): void {
     this.clearMessages();
+
+    if (this.loadingQuiz()) {
+      return;
+    }
 
     if (!this.quizForm.topic) {
       this.error.set('Selecciona un módulo.');
@@ -745,8 +817,23 @@ export class Admin {
 
     const questions = this.normalizedQuestions();
 
-    if (questions.some((question) => !question.text || question.options.length < 2)) {
-      this.error.set('Cada pregunta necesita un enunciado y al menos dos opciones.');
+    if (
+      questions.some(
+        (question) =>
+          !question.text ||
+          question.options.length !== 4 ||
+          !question.options.every(Boolean) ||
+          !question.explanation,
+      )
+    ) {
+      this.error.set(
+        'Cada pregunta necesita un enunciado, cuatro opciones y una explicación.',
+      );
+      return;
+    }
+
+    if (this.quizForm.published && questions.length < 20) {
+      this.error.set('Publica solo cuando el cuestionario tenga al menos 20 preguntas.');
       return;
     }
 
@@ -858,24 +945,173 @@ export class Admin {
 
   protected toggleQuiz(quiz: AdminQuiz): void {
     this.clearMessages();
+    const published = !quiz.published;
+
+    this.admin.setQuizPublished(quiz._id, published).subscribe({
+      next: () => {
+        this.quizzes.update((quizzes) =>
+          quizzes.map((item) =>
+            item._id === quiz._id ? { ...item, published } : item,
+          ),
+        );
+        this.message.set(
+          published ? 'Cuestionario publicado.' : 'Cuestionario despublicado.',
+        );
+        this.loadStats();
+      },
+      error: (err) =>
+        this.error.set(err?.error?.message ?? 'No se pudo cambiar la publicación.'),
+    });
+  }
+
+  protected regenerateTopicImage(): void {
+    const id = this.editingId();
+
+    if (!id || this.saving()) {
+      return;
+    }
+
+    this.clearMessages();
+    this.saving.set(true);
+
+    this.admin.assignTopicImage(id, this.topicForm.imageQuery).subscribe({
+      next: ({ image, imageUrl }) => {
+        this.editingImage.set(image);
+        this.topicForm.imageUrl = imageUrl;
+        this.saving.set(false);
+        this.message.set('Imagen del módulo actualizada.');
+        this.loadAll(true);
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(
+          err?.error?.message ?? 'No se pudo obtener una imagen para el módulo.',
+        );
+      },
+    });
+  }
+
+  protected regenerateLessonImage(): void {
+    const id = this.editingId();
+
+    if (!id || this.saving()) {
+      return;
+    }
+
+    this.clearMessages();
+    this.saving.set(true);
+
+    this.admin.assignLessonImage(id, this.lessonForm.imageQuery).subscribe({
+      next: ({ image, imageUrl }) => {
+        this.editingImage.set(image);
+        this.lessonForm.imageUrl = imageUrl;
+        this.saving.set(false);
+        this.message.set('Imagen de la lección actualizada.');
+        this.loadAll(true);
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(
+          err?.error?.message ?? 'No se pudo obtener una imagen para la lección.',
+        );
+      },
+    });
+  }
+
+  protected checkImages(): void {
+    if (this.checkingImages()) {
+      return;
+    }
+
+    this.clearMessages();
+    this.checkingImages.set(true);
+
+    this.admin.checkImages().subscribe({
+      next: (summary) => {
+        this.checkingImages.set(false);
+
+        if (summary.skipped) {
+          this.message.set('La verificación de imágenes ya está en curso.');
+        } else {
+          this.message.set(
+            `Imágenes verificadas: ${summary.available}/${summary.checked} disponibles, ${summary.repaired} reemplazadas, ${summary.failed} fallidas.`,
+          );
+        }
+
+        this.loadAll(true);
+      },
+      error: (err) => {
+        this.checkingImages.set(false);
+        this.error.set(
+          err?.error?.message ?? 'No se pudieron verificar las imágenes.',
+        );
+      },
+    });
+  }
+
+  protected newUser(): void {
+    this.activeTab.set('users');
+    this.closeForm();
+    this.clearMessages();
+    this.userForm = this.emptyUser();
+    this.showUserPassword.set(false);
+    setTimeout(() => {
+      document
+        .getElementById('user-form')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  }
+
+  protected saveUser(): void {
+    this.clearMessages();
+
+    const username = this.userForm.username.trim().toLowerCase();
+    const password = this.userForm.password;
+
+    if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+      this.error.set(
+        'El usuario debe tener entre 3 y 32 caracteres y usar solo minúsculas, números, punto, guion o guion bajo.',
+      );
+      return;
+    }
+
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      this.error.set(
+        'La contraseña debe tener al menos 8 caracteres e incluir una letra y un número.',
+      );
+      return;
+    }
+
+    if (password !== this.userForm.confirmPassword) {
+      this.error.set('Las contraseñas no coinciden.');
+      return;
+    }
+
+    this.saving.set(true);
+
     this.admin
-      .updateQuiz(quiz._id, {
-        topic: this.topicIdOf(quiz.topic),
-        lesson: this.lessonIdOf(quiz.lesson) || null,
-        title: quiz.title,
-        passingScore: quiz.passingScore,
-        questions: quiz.questions,
-        published: !quiz.published,
+      .createUser({
+        username,
+        password,
+        role: this.userForm.role,
       })
       .subscribe({
-        next: () => {
-          this.message.set(
-            quiz.published ? 'Cuestionario despublicado.' : 'Cuestionario publicado.',
+        next: (created) => {
+          this.users.update((users) =>
+            [...users, created].sort((a, b) =>
+              a.username.localeCompare(b.username),
+            ),
           );
-          this.loadAll(true);
+          this.userForm = this.emptyUser();
+          this.showUserPassword.set(false);
+          this.saving.set(false);
+          this.message.set(`Usuario ${created.username} creado.`);
+          this.loadStats();
         },
-        error: (err) =>
-          this.error.set(err?.error?.message ?? 'No se pudo cambiar la publicación.'),
+        error: (err) => {
+          this.saving.set(false);
+          this.error.set(err?.error?.message ?? 'No se pudo crear el usuario.');
+        },
       });
   }
 

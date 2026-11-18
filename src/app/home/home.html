@@ -89,6 +89,18 @@
         <div class="modules">
           @for (topic of topics(); track topic._id; let i = $index) {
             <a [class]="'module-card ' + accent(i)" [routerLink]="['/topics', topic.slug]">
+              @if (topic.image?.thumbnailUrl || topic.imageUrl) {
+                <div class="module-media" aria-hidden="true">
+                  <img
+                    [src]="topic.image?.thumbnailUrl || topic.imageUrl"
+                    [alt]="topic.image?.title || topic.name"
+                    loading="lazy"
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                    onerror="this.parentElement.style.display='none'"
+                  />
+                </div>
+              }
               <div class="module-top">
                 <span class="module-icon"><app-icon [name]="moduleIcon(topic.slug)" [size]="24" /></span>
                 <span class="module-index">{{ moduleNumber(i) }}</span>

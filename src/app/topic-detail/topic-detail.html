@@ -21,6 +21,17 @@
       </nav>
 
       <section [class]="'module-hero fade-up ' + accent(d.topic.order)">
+        @if (d.topic.image?.thumbnailUrl || d.topic.imageUrl) {
+          <div class="hero-media" aria-hidden="true">
+            <img
+              [src]="d.topic.image?.thumbnailUrl || d.topic.imageUrl"
+              [alt]="d.topic.image?.title || d.topic.name"
+              decoding="async"
+              referrerpolicy="no-referrer"
+              onerror="this.parentElement.style.display='none'"
+            />
+          </div>
+        }
         <div class="hero-emblem">
           <app-icon [name]="moduleIcon(d.topic.slug)" [size]="54" />
         </div>
@@ -41,6 +52,17 @@
           </a>
         }
       </section>
+
+      @if (d.topic.image?.attribution) {
+        <p class="image-credit">
+          Imagen:
+          <a
+            [href]="d.topic.image?.foreignLandingUrl || d.topic.image?.url"
+            target="_blank"
+            rel="noopener noreferrer"
+          >{{ d.topic.image?.attribution }}</a>
+        </p>
+      }
 
       <div class="layout">
         <section class="lessons">
@@ -68,6 +90,18 @@
                     }
                   </span>
                 </span>
+                @if (lesson.image?.thumbnailUrl || lesson.imageUrl) {
+                  <span class="lesson-thumb">
+                    <img
+                      [src]="lesson.image?.thumbnailUrl || lesson.imageUrl"
+                      [alt]="lesson.image?.title || lesson.title"
+                      loading="lazy"
+                      decoding="async"
+                      referrerpolicy="no-referrer"
+                      onerror="this.parentElement.style.display='none'"
+                    />
+                  </span>
+                }
                 <span class="lesson-go"><app-icon name="arrow-right" [size]="18" /></span>
               </a>
             }

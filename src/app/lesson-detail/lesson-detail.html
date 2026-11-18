@@ -24,6 +24,28 @@
 
       <div class="lesson-layout">
         <article class="lesson-main">
+          @if (l.image?.thumbnailUrl || l.imageUrl) {
+            <figure class="lesson-cover fade-up">
+              <img
+                [src]="l.image?.thumbnailUrl || l.imageUrl"
+                [alt]="l.image?.title || l.title"
+                decoding="async"
+                referrerpolicy="no-referrer"
+                onerror="this.parentElement.style.display='none'"
+              />
+              @if (l.image?.attribution) {
+                <figcaption>
+                  Imagen:
+                  <a
+                    [href]="l.image?.foreignLandingUrl || l.image?.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >{{ l.image?.attribution }}</a>
+                </figcaption>
+              }
+            </figure>
+          }
+
           <header class="lesson-hero fade-up">
             <span class="module-mark">
               <app-icon [name]="moduleIcon(l.topic.slug)" [size]="20" />
